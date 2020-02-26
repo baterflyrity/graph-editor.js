@@ -133,6 +133,6 @@ if __name__ == '__main__':
 	# check_dist(DIST)
 	clear_path(DIST)
 	minify([['main.js', JS]], [['style.css', CSS]])
-	copy(['readme.md', 'example.html'])
+	copy(['example.html'])
 	# zipdir(DIST)
 	print('Built')
