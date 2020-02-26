@@ -4,9 +4,11 @@
 	<meta charset="UTF-8">
 	<title>Graph editor example</title>
 	<!--jQuery-->
+	<!-- TODO Переделать на локальные ссылки -->
 	<script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
-	
+
 	<!--Semantic-UI-->
+	<!-- TODO Переделать на локальные ссылки -->
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css" integrity="sha256-9mbkOfVho3ZPXfM7W8sV2SndrGDuh7wuyLjtsWeTI1Q=" crossorigin="anonymous"/>
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/button.min.css" integrity="sha256-xtpiJw1+6DW1Oac4CVyU7PbCxHxufOBIspA9T79Y384=" crossorigin="anonymous"/>
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/dropdown.min.css" integrity="sha256-eKk/OB1/M9wf6oWV2+jUV8DpHXBFjNthcjTRvgPb4jg=" crossorigin="anonymous"/>
@@ -22,28 +24,42 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/dropdown.min.js" integrity="sha256-uEocYy6a0MpPLLHtYV7QAGdOeMRwE0Am2WtnOg/hBfM=" crossorigin="anonymous"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/modal.min.js" integrity="sha256-8POmd6680Gev+MdgKbVOHP+9lm+9WB1AVyuLf2WRcxc=" crossorigin="anonymous"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/transition.min.js" integrity="sha256-k30cmb6hiQ/LGKpX2AcllUduUJ0kA4DKKStgUxkGQzM=" crossorigin="anonymous"></script>
-	
+
 	<!--Vis.js Network-->
-	<link rel="stylesheet" type="text/css" href="vis-network.min.css">
+	<!-- TODO Переделать на локальные ссылки -->
 	<script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
-	
+
 	<!--Graph Editor-->
-	<link rel="stylesheet" type="text/css" href="graph-editor1.0.min.css">
-	<script type="text/javascript" src="graph-editor1.0.min.js"></script>
+	<link rel="stylesheet" type="text/css" href="dist/{{CSS}}">
+	<!-- TODO Нужно весь этот набор билиотек собрать в одну каким-нибудь билдером, крому jquery -->
+
 </head>
 <body>
 </body>
+
+<!-- TODO Кто ж скрипты то в header подключает то... -->
+<script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<script type="text/javascript" src="dist/{{JS}}"></script>
 <script>
 	$(function () {
-		let blueNodeType = GraphEditor.CreateType('Синий узел', 'Эллипсы синего цвета', 'blue', {
+		let blueNodeType = GraphEditor.CreateType('input', 'Синий узел', 'Эллипсы синего цвета', 'blue', {
 			color: '#8dd0f8',
 			shape: 'ellipse'
 		});
-		let redNodeType = GraphEditor.CreateType('Красный узел', 'Красные узлы без маркера', 'hidden', {
-			color: 'red'
-		});
+
+		let titles = ['a1', 'a2', 'a3'];
+		let redNodeType = GraphEditor.CreateType('features', 'Красный узел', 'Красные узлы без маркера', 'hidden', {
+			color: 'red',
+			shape: 'circle'
+		}, titles);
 		let nodeStyles = GraphEditor.CreateStyles(blueNodeType, redNodeType);
-		let ge = GraphEditor('body', nodeStyles);
+		let gg = GraphEditor('body', nodeStyles, {a: 'А1', b:'А2'});
+
+		gg.addNode('input', 'input', 'Input');
+		gg.addNode('f1', 'features', 'F1');
+		gg.addEdge('input', 'f1', '1', 'id');
+		// gg.deserialize(JSON.stringify(nodes))
 	});
 </script>
+
 </html>

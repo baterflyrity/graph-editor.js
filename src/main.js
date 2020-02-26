@@ -141,6 +141,13 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 					stabilization: {
 						fit: false
 					}
+				},
+				layout: {
+					hierarchical: {
+						direction: "LR",
+						sortMethod: "directed",
+						shakeTowards:"leaves"
+					}
 				}
 			});
 		scope.graph.addEventListener('select', function (e) {
@@ -414,7 +421,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 	let classTypeArray = Object.values(scope.classes).map(c => Object.keys(scope.types[c]).map(t => [c, t]));
 	let editors = Object.fromEntries([].concat(...classTypeArray).map(classType => [
 		classType[0] + ':' + classType[1],  // TODO Ужасная конструкция, надо подумать как это сделать по человечески
-		BuildEditor(classType[0], classType[1],function (elementClass, element) {
+		BuildEditor(classType[0], classType[1], function (elementClass, element) {
 			scope.graph.disableEditMode();
 			Update(elementClass, element, true);
 		}, function (elementClass, element) {

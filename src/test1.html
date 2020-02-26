@@ -24,8 +24,9 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/transition.min.js" integrity="sha256-k30cmb6hiQ/LGKpX2AcllUduUJ0kA4DKKStgUxkGQzM=" crossorigin="anonymous"></script>
 	
 	<!--Vis.js Network-->
-	<link rel="stylesheet" type="text/css" href="vis-network.min.css">
 	<script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+	<!--	<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">-->
+	<!--	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>-->
 	
 	<!--Graph Editor-->
 	<link rel="stylesheet" type="text/css" href="style.css">
@@ -35,15 +36,47 @@
 </body>
 <script>
 	$(function () {
-		let blueNodeType = GraphEditor.CreateType('Синий узел', 'Эллипсы синего цвета', 'blue', {
+		// let blueNodeType = GraphEditor.CreateType('Синий узел', 'Эллипсы синего цвета', 'blue', {
+		// 	color: '#8dd0f8',
+		// 	shape: 'ellipse'
+		// });
+		// let redNodeType = GraphEditor.CreateType('Красный узел', 'Красные узлы без маркера', 'hidden', {
+		// 	color: 'red'
+		// });
+		// let nodeStyles = GraphEditor.CreateStyles(blueNodeType, redNodeType);
+		// window.ge = GraphEditor('body', nodeStyles);
+		let data = {'Курс': 'Курс', 'Став': 'Став', 'Объем': 'Объем', 'Цена': 'Цена', 'Объем 1': 'Объем 1'}
+
+		for (let i = 0; i < 20; i++)
+			data['test' + i] = 'test' + i;
+
+		let inputNodeType = GraphEditor.CreateType('0', 'Вход', 'Эллипсы синего цвета', '#8dd0f8', {
 			color: '#8dd0f8',
+			shape: 'circle'
+		});
+		let featureNodeType = GraphEditor.CreateType('1', 'Признак', 'Признаки', '#b7f9c2', {
+			color: '#b7f9c2',
 			shape: 'ellipse'
+		}, data);
+		let outputNodeType = GraphEditor.CreateType('2', 'Модель', 'Модель', '#80aef5', {
+			color: '#80aef5',
+			shape: 'circle'
 		});
-		let redNodeType = GraphEditor.CreateType('Красный узел', 'Красные узлы без маркера', 'hidden', {
-			color: 'red'
-		});
-		let nodeStyles = GraphEditor.CreateStyles(blueNodeType, redNodeType);
-		window.ge = GraphEditor('body', nodeStyles);
+
+		let nodeStyles = GraphEditor.CreateStyles(inputNodeType, featureNodeType, outputNodeType);
+
+		ge = GraphEditor('body', nodeStyles, data);
+
+		ge.addNode('input', '0', 'Вход')
+		ge.addNode('output', '2', 'Модель')
+
+		for (let col_code in data) {
+			ge.addNode(col_code, '1', col_code);
+			ge.addEdge('input', col_code, col_code + '_1', '0');
+			ge.addEdge(col_code, 'output', col_code + '_2', '1');
+		}
+
+
 	});
 </script>
 </html>

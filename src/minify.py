@@ -55,7 +55,7 @@ of
 files.
 """
 	for file in files:
-		write(DIST + '/' + file[1], minifier(read(file[0])))
+		write(DIST + '/' + file[1], minifier(read(SRC + '/' + file[0])))
 
 
 def read(path):
@@ -102,10 +102,14 @@ def set_globals(text):
 	return text
 
 
+def raw_copy(src_path, dst_path):
+	write(dst_path, set_globals(read(src_path)))
+
+
 def copy(files):
 	"""Copy with templating to dist directory."""
 	for file in assert_list(files):
-		write(DIST + '/' + file[1], set_globals(read(file[0])))
+		raw_copy(SRC + '/' + file[0], DIST + '/' + file[1])
 
 
 def zipdir(path):
@@ -128,11 +132,13 @@ if __name__ == '__main__':
 	VERSION = '1.0'
 	CSS = f'graph-editor{VERSION}.min.css'
 	JS = f'graph-editor{VERSION}.min.js'
+	SRC = f'src'
 	DIST = f'dist'
 
 	# check_dist(DIST)
 	clear_path(DIST)
 	minify([['main.js', JS]], [['style.css', CSS]])
-	copy(['example.html'])
+	raw_copy('src/example.html', 'example.html')
+	raw_copy('src/README.md', 'README.md')
 	# zipdir(DIST)
 	print('Built')

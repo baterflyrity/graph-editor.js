@@ -27,10 +27,10 @@
 
 	<!--Vis.js Network-->
 	<!-- TODO Переделать на локальные ссылки -->
-	<link rel="stylesheet" type="text/css" href="vis-network.min.css">
+	<script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 
 	<!--Graph Editor-->
-	<link rel="stylesheet" type="text/css" href="{{CSS}}">
+	<link rel="stylesheet" type="text/css" href="dist/graph-editor1.0.min.css">
 	<!-- TODO Нужно весь этот набор билиотек собрать в одну каким-нибудь билдером, крому jquery -->
 
 </head>
@@ -39,7 +39,7 @@
 
 <!-- TODO Кто ж скрипты то в header подключает то... -->
 <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
-<script type="text/javascript" src="{{JS}}"></script>
+<script type="text/javascript" src="dist/graph-editor1.0.min.js"></script>
 <script>
 	$(function () {
 		let blueNodeType = GraphEditor.CreateType('input', 'Синий узел', 'Эллипсы синего цвета', 'blue', {
