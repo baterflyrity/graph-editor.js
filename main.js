@@ -28,22 +28,24 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		classes: Object.freeze({node: 'Узел', edge: 'Ребро'}),
 		container: jQuery(container).first(),
 		save: () => Download(scope.serialize(), 'graph.json', 'application/json'),
-		addNode: (id, type = 0, template = {}) => {
+		addNode: (id, type = 0, label, template = {}) => {
 			scope.graph.storePositions();
 			let pos = {x: 0, y: 0};
 			let nodes = scope.data[scope.classes.node].get();
-			console.log('type', type);
 			if (nodes.length) {
 				pos.x = nodes.map(n => n.x).reduce((a, b) => a + b) / nodes.length;
 				pos.y = nodes.map(n => n.y).reduce((a, b) => a + b) / nodes.length;
 				pos.x += Math.random() * 100 - 50;
 				pos.y += Math.random() * 100 - 50;
 			}
-			setTimeout(() => StabilizeFitZoom(), 1);
-			return scope.data[scope.classes.node].add(Object.assign({}, pos, scope.types[scope.classes.node][type].template, {id: id, type: type}, template))[0];
+
+			// TODO Вот из-за этой строки всё ломалось: setTimeout(() => StabilizeFitZoom(), 1);
+			let element = $.extend(true, scope.types[scope.classes.node][type].template, {id: id, type: type, label: label}, pos, template);
+			return scope.data[scope.classes.node].add(element)[0];
 		},
 		addEdge: (from, to, id, type = 0, template = {}) => {
-			return scope.data[scope.classes.edge].add(Object.assign({}, scope.types[scope.classes.edge][type].template, {id: id, type: type, from: from, to: to}, template))[0];
+			let edge = Object.assign({}, scope.types[scope.classes.edge][type].template, {id: id, type: type, from: from, to: to}, template);
+			return scope.data[scope.classes.edge].add(edge)[0];
 		},
 		removeNode: id => scope.data[scope.classes.node].remove(id),
 		removeEdge: id => scope.data[scope.classes.edge].remove(id),
@@ -53,23 +55,23 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		[scope.classes.edge]: new vis.DataSet(edgesData),
 	};
 	scope.types = {
-		[scope.classes.node]: nodeStyles && nodeStyles.length ? nodeStyles : GraphEditor.CreateStyles(
-			GraphEditor.CreateType('Эллипс', 'Синие эллипсы', 'blue', {
+		[scope.classes.node]: nodeStyles ? nodeStyles : GraphEditor.CreateStyles(
+			GraphEditor.CreateType('0', 'Эллипс', 'Синие эллипсы', 'blue', {
 				color: '#8dd0f8',
 				shape: 'ellipse'
 			}),
-			GraphEditor.CreateType('Прямоугольник', 'Зелёные прямоугольники', 'green', {
+			GraphEditor.CreateType('1', 'Прямоугольник', 'Зелёные прямоугольники', 'green', {
 				color: '#82ec93',
 				shape: 'box'
 			})
 		),
-		[scope.classes.edge]: edgeStyles && edgeStyles.length ? edgeStyles : GraphEditor.CreateStyles(
-			GraphEditor.CreateType('Сплошное', 'Без штриховки', 'hidden', {
+		[scope.classes.edge]: edgeStyles ? edgeStyles : GraphEditor.CreateStyles(
+			GraphEditor.CreateType('0', 'Сплошное', 'Без штриховки', 'hidden', {
 				arrows: 'to',
 				dashes: false,
 				color: {inherit: 'both'}
 			}),
-			GraphEditor.CreateType('Штрихованное', 'Равномерная штриховка', 'hidden', {
+			GraphEditor.CreateType('1', 'Штрихованное', 'Равномерная штриховка', 'hidden', {
 				arrows: 'to',
 				dashes: true,
 				color: {inherit: 'both'}
@@ -154,6 +156,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 				startEditingCallback(editedClass, editedElement);
 			} else if (editedElement && editedClass) endEditingCallback(editedClass, editedElement);
 		});
+
 		$graph.find('canvas').click(function () {
 			if (edgeEditorState === 1)
 				edgeEditorState = 2;
@@ -163,6 +166,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 				scope.graph.unselectAll();
 			}
 		});
+
 		scope.serialize = function () {
 			scope.graph.storePositions();
 			// noinspection JSCheckFunctionSignatures
@@ -277,22 +281,29 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 	 saveCallback = function (class, graph edited object)
 	 deleteCallback = function (class, graph editing object)
 	 */
-	function BuildEditor(elementClass, saveCallback, deleteCallback) {
-		let buf = scope.types[elementClass].map(t => `<div class="item" data-value="${t.id}" data-text='
-														<div class="ui ${t.color} empty circular label"></div> ${t.name}
+	function BuildEditor(elementClass, elementType, saveCallback, deleteCallback) {
+		let elClass = scope.types[elementClass];
+
+		let buf = Object.keys(elClass).map(t => `<div class="item" data-value="${t}" data-text='
+														<div class="ui ${elClass[t].color} empty circular label"></div> ${elClass[t].name}
 													'>
-														<div class="ui ${t.color} empty circular label"></div> ${t.name} 
-														<span class="description">${t.description}</span>
+														<div class="ui ${elClass[t].color} empty circular label"></div> ${elClass[t].name} 
+														<span class="description">${elClass[t].description}</span>
 													</div>`);
 		let labelBuf;
-		if (elementClass === scope.classes.edge) labelBuf = '<div class="label-text" contenteditable="true" data-placeholder="Введите название">Название</div>'; else {
-			let tbuf = titles.map(t => `<div class="item" data-value="${t}" data-text='${t}'>${t}</span></div>`);
+		if (elementClass === scope.classes.edge) {
+			labelBuf = '<div class="label-text" contenteditable="true" data-placeholder="Введите название">Название</div>';
+		} else if (scope.types[elementClass][elementType]['titles']) {
+			let tbuf = Object.keys(titles).map(t => `<div class="item" data-value="${t}" data-text='${titles[t]}'>${titles[t]}</span></div>`);
 			labelBuf = `<div class="ui search selection dropdown"><input type="hidden" value="0" data-property="title">
 								<i class="dropdown icon"></i>
 								<div class="label-text text">Название</div>								
 								<div class="menu">${tbuf.join('')}</div>
 							</div>`;
+		} else {
+			labelBuf = '<div class="label-text" contenteditable="true" data-placeholder="Введите название">Название</div>';
 		}
+
 		let $editor = jQuery(`<div class="class-editor">
 				<div class="ui raised card">
 					<div class="content">
@@ -313,6 +324,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 					</div>
 				</div>
 			</div>`);
+
 		let $label = $editor.find('.content>.label .label-text');
 		$editor.find('.content>.label .dropdown').dropdown();
 		let $title = $editor.find('.content p[contenteditable="true"]');
@@ -344,18 +356,21 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 	}
 
 	function SetOrDelete(object, property, value) {
-		if (!value && object.hasOwnProperty(property)) delete object[property];
-		else object[property] = value;
+		// TODO Переписать, что удалять если объет содержит такое же свойство, как переданное
+		// if (!value && object.hasOwnProperty(property)) delete object[property];
+		if (!value) delete object[property];
+		else {
+			object[property] = value;
+		}
 		return object;
 	}
 
 	function Update(elementClass, element, save) {
-		scope.graph.storePositions();
-		let pos = scope.data[elementClass].get(element.id);
-		element = Object.assign(element, scope.types[elementClass][element.type * 1].template, pos && pos.hasOwnProperty('x') ? {x: pos.x, y: pos.y} : {});
+		// TODO Упростил, не понял зачем ты столько кода городил, есть в этом практический смысл?
 		if (save) {
-			scope.data[elementClass].remove(element.id);
-			scope.data[elementClass].add(element);
+			delete element['x'];
+			delete element['y'];
+			scope.data[elementClass].update(element);
 		}
 		return element;
 	}
@@ -395,17 +410,21 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 	}
 
 	// noinspection JSCheckFunctionSignatures
-	let editors = Object.fromEntries(Object.values(scope.classes).map(classValue => [classValue,
-		BuildEditor(classValue, function (elementClass, element) {
+	// TODO Теперь editors для каждой комбинации класс:тип
+	let classTypeArray = Object.values(scope.classes).map(c => Object.keys(scope.types[c]).map(t => [c, t]));
+	let editors = Object.fromEntries([].concat(...classTypeArray).map(classType => [
+		classType[0] + ':' + classType[1],  // TODO Ужасная конструкция, надо подумать как это сделать по человечески
+		BuildEditor(classType[0], classType[1],function (elementClass, element) {
 			scope.graph.disableEditMode();
 			Update(elementClass, element, true);
 		}, function (elementClass, element) {
 			scope.graph.disableEditMode();
 			scope.data[elementClass].remove(element.id);
 		})]));
+
 	let $graph = BuildGraph(function (elementClass, element) {
 		HideEditors(elementClass);
-		editors[elementClass].load(element);
+		editors[elementClass + ':' + element.type].load(element);  // TODO Ужасная конструкция, надо подумать как это сделать по человечески
 	}, function (elementClass, element) {
 		HideEditors();
 		return Update(elementClass, element, false);
@@ -450,19 +469,23 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 	return scope;
 }
 
-GraphEditor.CreateType = function (name, description, color, template) {
+GraphEditor.CreateType = function (id, name, description, color, template, titles) {
 	return {
+		id: id,
 		template: template,
 		name: name,
 		color: color,
-		description: description
+		description: description,
+		titles: titles
 	};
 };
 GraphEditor.CreateStyles = function (...types) {
-	return types.map(function (x, i) {
-		x.template.type = x.id = '' + i;
-		return x;
-	});
+	let styles = {};
+	// TODO Тоже более красиво хочется преобразовать в словарь...
+	for (let t in types) {
+		styles[types[t].id] = types[t];
+	}
+	return styles
 };
 
 
