@@ -1,4 +1,4 @@
-# Graph Editor {{VERSION}}
+# Graph Editor 1.0
 Данный jQuery плагин позволяет встроить редактор графов на сайт. Функции редактора:
 * Добавление, удаление, перемещение узлов и рёбер.
 * Изменение стилей/типов узлов и рёбер.
@@ -43,11 +43,11 @@
  	<script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 
 ### 2. Подключение
-Сохраните файлы [{{CSS}}]({{CSS}}), [{{JS}}]({{JS}}) и подключите их после зависимостей.
+Сохраните файлы [graph-editor1.0.min.css](graph-editor1.0.min.css), [graph-editor1.0.min.js](graph-editor1.0.min.js) и подключите их после зависимостей.
 
     <!--Graph Editor-->
-    <link rel="stylesheet" type="text/css" href="path/to/{{CSS}}">
-    <script type="text/javascript" src="path/to/{{JS}}"></script>
+    <link rel="stylesheet" type="text/css" href="path/to/graph-editor1.0.min.css">
+    <script type="text/javascript" src="path/to/graph-editor1.0.min.js"></script>
     
 ### 3. Инициализация
 Редактор графа необходимо создать из любого контейнера на странице с помощью функции `GraphEditor`.
@@ -147,7 +147,7 @@
 
 **graph.classes → перечисление классов**
 
-Возвращает перечисление классов графа. В версии {{VERSION}} доступны два класса:
+Возвращает перечисление классов графа. В версии 1.0 доступны два класса:
 1. node - узлы,
 2. edge - рёбра.
 

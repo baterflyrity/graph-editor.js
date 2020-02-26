@@ -5,7 +5,7 @@
 .gitignore
 ### PyCharm ###
 .idea/
-.idea
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -26,7 +26,6 @@ Pipfile.lock
 dmypy.json
 # Pyre type checker
 .pyre/
-.python-version
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow
 __pypackages__/
 # Environments
