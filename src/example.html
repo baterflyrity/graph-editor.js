@@ -42,17 +42,17 @@
 <script type="text/javascript" src="dist/{{JS}}"></script>
 <script>
 	$(function () {
-		let blueNodeType = GraphEditor.CreateType('input', 'Синий узел', 'Эллипсы синего цвета', 'blue', {
+		let blueNodeType = GraphEditor.CreateType_old('input', 'Синий узел', 'Эллипсы синего цвета', 'blue', {
 			color: '#8dd0f8',
 			shape: 'ellipse'
 		});
 
 		let titles = ['a1', 'a2', 'a3'];
-		let redNodeType = GraphEditor.CreateType('features', 'Красный узел', 'Красные узлы без маркера', 'hidden', {
+		let redNodeType = GraphEditor.CreateType_old('features', 'Красный узел', 'Красные узлы без маркера', 'hidden', {
 			color: 'red',
 			shape: 'circle'
 		}, titles);
-		let nodeStyles = GraphEditor.CreateStyles(blueNodeType, redNodeType);
+		let nodeStyles = GraphEditor.CreateStyles_old(blueNodeType, redNodeType);
 		let gg = GraphEditor('body', nodeStyles, {a: 'А1', b:'А2'});
 
 		gg.addNode('input', 'input', 'Input');

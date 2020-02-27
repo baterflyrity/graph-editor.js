@@ -25,13 +25,12 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 	AssertVariable('dropdown', jQuery(), 'Semantic UI');
 
 	let scope = {
-		classes: Object.freeze({node: 'Узел', edge: 'Ребро'}),
 		container: jQuery(container).first(),
 		save: () => Download(scope.serialize(), 'graph.json', 'application/json'),
 		addNode: (id, type = 0, label, template = {}) => {
 			scope.graph.storePositions();
 			let pos = {x: 0, y: 0};
-			let nodes = scope.data[scope.classes.node].get();
+			let nodes = scope.data[GraphEditor.ElementClasses.Node.classID].get();
 			if (nodes.length) {
 				pos.x = nodes.map(n => n.x).reduce((a, b) => a + b) / nodes.length;
 				pos.y = nodes.map(n => n.y).reduce((a, b) => a + b) / nodes.length;
@@ -40,38 +39,38 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 			}
 
 			// TODO Вот из-за этой строки всё ломалось: setTimeout(() => StabilizeFitZoom(), 1);
-			let element = $.extend(true, scope.types[scope.classes.node][type].template, {id: id, type: type, label: label}, pos, template);
-			return scope.data[scope.classes.node].add(element)[0];
+			let element = $.extend(true, scope.types[GraphEditor.ElementClasses.Node.classID][type].template, {id: id, type: type, label: label}, pos, template);
+			return scope.data[GraphEditor.ElementClasses.Node.classID].add(element)[0];
 		},
 		addEdge: (from, to, id, type = 0, template = {}) => {
-			let edge = Object.assign({}, scope.types[scope.classes.edge][type].template, {id: id, type: type, from: from, to: to}, template);
-			return scope.data[scope.classes.edge].add(edge)[0];
+			let edge = Object.assign({}, scope.types[GraphEditor.ElementClasses.Edge.classID][type].template, {id: id, type: type, from: from, to: to}, template);
+			return scope.data[GraphEditor.ElementClasses.Edge.classID].add(edge)[0];
 		},
-		removeNode: id => scope.data[scope.classes.node].remove(id),
-		removeEdge: id => scope.data[scope.classes.edge].remove(id),
+		removeNode: id => scope.data[GraphEditor.ElementClasses.Node.classID].remove(id),
+		removeEdge: id => scope.data[GraphEditor.ElementClasses.Edge.classID].remove(id),
 	};
 	scope.data = {
-		[scope.classes.node]: new vis.DataSet(nodesData),
-		[scope.classes.edge]: new vis.DataSet(edgesData),
+		[GraphEditor.ElementClasses.Node.classID]: new vis.DataSet(nodesData),
+		[GraphEditor.ElementClasses.Edge.classID]: new vis.DataSet(edgesData),
 	};
 	scope.types = {
-		[scope.classes.node]: nodeStyles ? nodeStyles : GraphEditor.CreateStyles(
-			GraphEditor.CreateType('0', 'Эллипс', 'Синие эллипсы', 'blue', {
+		[GraphEditor.ElementClasses.Node.classID]: nodeStyles ? nodeStyles : GraphEditor.CreateStyles_old(
+			GraphEditor.CreateType_old('0', 'Эллипс', 'Синие эллипсы', 'blue', {
 				color: '#8dd0f8',
 				shape: 'ellipse'
 			}),
-			GraphEditor.CreateType('1', 'Прямоугольник', 'Зелёные прямоугольники', 'green', {
+			GraphEditor.CreateType_old('1', 'Прямоугольник', 'Зелёные прямоугольники', 'green', {
 				color: '#82ec93',
 				shape: 'box'
 			})
 		),
-		[scope.classes.edge]: edgeStyles ? edgeStyles : GraphEditor.CreateStyles(
-			GraphEditor.CreateType('0', 'Сплошное', 'Без штриховки', 'hidden', {
+		[GraphEditor.ElementClasses.Edge.classID]: edgeStyles ? edgeStyles : GraphEditor.CreateStyles_old(
+			GraphEditor.CreateType_old('0', 'Сплошное', 'Без штриховки', 'hidden', {
 				arrows: 'to',
 				dashes: false,
 				color: {inherit: 'both'}
 			}),
-			GraphEditor.CreateType('1', 'Штрихованное', 'Равномерная штриховка', 'hidden', {
+			GraphEditor.CreateType_old('1', 'Штрихованное', 'Равномерная штриховка', 'hidden', {
 				arrows: 'to',
 				dashes: true,
 				color: {inherit: 'both'}
@@ -100,8 +99,8 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		let editedElement, editedClass;
 		scope.graph = new vis.Network($graph[0],
 			{
-				nodes: scope.data[scope.classes.node],
-				edges: scope.data[scope.classes.edge]
+				nodes: scope.data[GraphEditor.ElementClasses.Node.classID],
+				edges: scope.data[GraphEditor.ElementClasses.Edge.classID]
 			},
 			{
 				manipulation: {
@@ -113,7 +112,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 								scope.graph.disableEditMode();
 							}, 1);
 							edgeEditorState = 0;
-							callback(endEditingCallback(scope.classes.edge, edgeData));
+							callback(endEditingCallback(GraphEditor.ElementClasses.Edge.classID, edgeData));
 						}
 					},
 					addNode: function (nodeData, callback) {
@@ -123,7 +122,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 							scope.graph.disableEditMode();
 							//jQuery('#addNode').removeClass('active');
 						}, 1);
-						callback(endEditingCallback(scope.classes.node, nodeData));
+						callback(endEditingCallback(GraphEditor.ElementClasses.Node.classID, nodeData));
 					},
 					addEdge: function (edgeData, callback) {
 						edgeData.type = '0';
@@ -133,7 +132,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 							scope.graph.disableEditMode();
 							//jQuery('#addEdge').removeClass('active');
 						}, 1);
-						if (edgeData.from !== edgeData.to) callback(endEditingCallback(scope.classes.edge, edgeData));
+						if (edgeData.from !== edgeData.to) callback(endEditingCallback(GraphEditor.ElementClasses.Edge.classID, edgeData));
 					}
 				},
 				locale: 'ru',
@@ -152,13 +151,13 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 			});
 		scope.graph.addEventListener('select', function (e) {
 			if (e.nodes.length) {
-				editedElement = scope.data[scope.classes.node].get(e.nodes[0]);
-				editedClass = scope.classes.node;
+				editedElement = scope.data[GraphEditor.ElementClasses.Node.classID].get(e.nodes[0]);
+				editedClass = GraphEditor.ElementClasses.Node.classID;
 				startEditingCallback(editedClass, editedElement);
 			} else if (e.edges.length === 1) {
 				scope.graph.editEdgeMode();
-				editedElement = scope.data[scope.classes.edge].get(e.edges[0]);
-				editedClass = scope.classes.edge;
+				editedElement = scope.data[GraphEditor.ElementClasses.Edge.classID].get(e.edges[0]);
+				editedClass = GraphEditor.ElementClasses.Edge.classID;
 				edgeEditorState = 1;
 				startEditingCallback(editedClass, editedElement);
 			} else if (editedElement && editedClass) endEditingCallback(editedClass, editedElement);
@@ -177,14 +176,14 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		scope.serialize = function () {
 			scope.graph.storePositions();
 			// noinspection JSCheckFunctionSignatures
-			return JSON.stringify(Object.fromEntries(Object.entries(scope.classes).map(([className, classValue]) => [className, scope.data[classValue].get()])));
+			return JSON.stringify(Object.fromEntries(Object.entries(GraphEditor.ElementClasses).map(([className, classValue]) => [className, scope.data[classValue.classID].get()])));
 		};
 		scope.deserialize = function (json) {
 			let buf = JSON.parse(json);
 			// noinspection JSCheckFunctionSignatures
-			Object.entries(scope.classes).forEach(([className, classValue]) => {
-				scope.data[classValue].clear();
-				buf[className].forEach(x => scope.data[classValue].add(x));
+			Object.entries(GraphEditor.ElementClasses).forEach(([className, classValue]) => {
+				scope.data[classValue.classID].clear();
+				buf[className].forEach(x => scope.data[classValue.classID].add(x));
 			});
 			StabilizeFitZoom();
 		};
@@ -298,7 +297,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 														<span class="description">${elClass[t].description}</span>
 													</div>`);
 		let labelBuf;
-		if (elementClass === scope.classes.edge) {
+		if (elementClass === GraphEditor.ElementClasses.Edge.classID) {
 			labelBuf = '<div class="label-text" contenteditable="true" data-placeholder="Введите название">Название</div>';
 		} else if (scope.types[elementClass][elementType]['titles']) {
 			let tbuf = Object.keys(titles).map(t => `<div class="item" data-value="${t}" data-text='${titles[t]}'>${titles[t]}</span></div>`);
@@ -389,7 +388,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 
 	function FitZoom() {
 		scope.graph.storePositions();
-		let nodes = scope.data[scope.classes.node].get();
+		let nodes = scope.data[GraphEditor.ElementClasses.Node.classID].get();
 		let x, y;
 		if (!nodes.length) x = y = 0;
 		else {
@@ -419,7 +418,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 
 	// noinspection JSCheckFunctionSignatures
 	// TODO Теперь editors для каждой комбинации класс:тип
-	let classTypeArray = Object.values(scope.classes).map(c => Object.keys(scope.types[c]).map(t => [c, t]));
+	let classTypeArray = Object.values(GraphEditor.ElementClasses).map(c => Object.keys(scope.types[c.classID]).map(t => [c.classID, t]));
 	let editors = Object.fromEntries([].concat(...classTypeArray).map(classType => [
 		classType[0] + ':' + classType[1],  // TODO Ужасная конструкция, надо подумать как это сделать по человечески
 		BuildEditor(classType[0], classType[1], function (elementClass, element) {
@@ -477,7 +476,46 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 	return scope;
 }
 
-GraphEditor.CreateType = function (id, name, description, color, template, titles) {
+function GetArgumentNames(func) {
+	return func.toString()
+		.replace(/((\/\/.*$)|(\/\*[\s\S]*?\*\/)|(\s))/mg, '')
+		.match(/^function\s*[^\(]*\(\s*([^\)]*)\)/m)[1]
+		.split(/,/);
+}
+
+function ZipArrays(arr1, arr2) {
+	return arr1.map((k, i) => [k, arr2[i]]);
+}
+
+function CreateObjectFromArguments(args) {
+	return Object.fromEntries(ZipArrays(GetArgumentNames(args.callee), args));
+}
+
+
+GraphEditor.CreateElementClass = function (classID, visTemplate) { return CreateObjectFromArguments(arguments); };
+GraphEditor.CreateElementStyle = function (styleID, elementClass, visTemplate) { return CreateObjectFromArguments(arguments); };
+GraphEditor.CreateElementProperty = function (propertyID, propertyClass, propertyName, propertyDefaultValue) { return CreateObjectFromArguments(arguments); };
+GraphEditor.CreateElementType = function (typeID, elementClass, typeName, typeDescription, typeColor, typePropertiesArray, typeStylesArray) {
+	let otherClasses = typeStylesArray.filter(style => style.elementClass !== elementClass);
+	if (otherClasses.length)
+		throw `Can not create ${elementClass} ${typeName} type with style(s) ${otherClasses.map(style => style.styleID + '[' + style.elementClass + ']').join(', ')}.`;
+	let type = CreateObjectFromArguments(arguments);
+	type.visTemplate = Object.assign({}, elementClass.visTemplate, ...typeStylesArray.map(style => style.visTemplate));
+	type.propertiesValues = Object.fromEntries(typePropertiesArray.map(prop => [prop.propertyID, prop.propertyDefaultValue]));
+	return type;
+};
+GraphEditor.CreateElement = function (elementID, elementType, elementPropertiesValuesDict = {}, ...elementClassArguments) {
+	return {
+		elementID: elementID,
+		propertiesValues: Object.assign({}, elementType.propertiesValues, elementPropertiesValuesDict),
+		visTemplate: Object.assign({}, elementType.visTemplate, Object.fromEntries(ZipArrays(Object.keys(elementType.elementClass.visTemplate).slice(0, elementClassArguments.length), elementClassArguments))),
+		elementType: elementType
+	};
+}
+GraphEditor.ElementClasses = Object.freeze({Node: GraphEditor.CreateElementClass('Node', {x: 0, y: 0}), Edge: GraphEditor.CreateElementClass('Edge', {from: 0, to: 0})}); //INFO: Now only two classes of elements ara available: nodes and edges. So they are hardcoded.
+GraphEditor.PropertyClasses = Object.freeze({Text: 'Текстовое поле'});
+
+GraphEditor.CreateType_old = function (id, name, description, color, template, titles) {
 	return {
 		id: id,
 		template: template,
@@ -487,7 +525,7 @@ GraphEditor.CreateType = function (id, name, description, color, template, title
 		titles: titles
 	};
 };
-GraphEditor.CreateStyles = function (...types) {
+GraphEditor.CreateStyles_old = function (...types) {
 	let styles = {};
 	// TODO Тоже более красиво хочется преобразовать в словарь...
 	for (let t in types) {

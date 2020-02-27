@@ -50,20 +50,20 @@
 		// for (let i = 0; i < 20; i++)
 		// 	data['test' + i] = 'test' + i;
 
-		let inputNodeType = GraphEditor.CreateType('qwe', 'Вход', 'Эллипсы синего цвета', '#8dd0f8', {
+		let inputNodeType = GraphEditor.CreateType_old('qwe', 'Вход', 'Эллипсы синего цвета', '#8dd0f8', {
 			color: '#8dd0f8',
 			shape: 'circle'
 		});
-		let featureNodeType = GraphEditor.CreateType('asd', 'Признак', 'Признаки', '#b7f9c2', {
+		let featureNodeType = GraphEditor.CreateType_old('asd', 'Признак', 'Признаки', '#b7f9c2', {
 			color: '#b7f9c2',
 			shape: 'ellipse'
 		}, data);
-		let outputNodeType = GraphEditor.CreateType('zxc', 'Модель', 'Модель', '#80aef5', {
+		let outputNodeType = GraphEditor.CreateType_old('zxc', 'Модель', 'Модель', '#80aef5', {
 			color: '#80aef5',
 			shape: 'circle'
 		});
 
-		let nodeStyles = GraphEditor.CreateStyles(inputNodeType, featureNodeType, outputNodeType);
+		let nodeStyles = GraphEditor.CreateStyles_old(inputNodeType, featureNodeType, outputNodeType);
 
 		ge = GraphEditor('body', nodeStyles, Object.values(data));
 
