@@ -504,7 +504,3 @@ GraphEditor.CreateNode = function (id, properties) {
 	//TODO: Care about Vis properties overlap.
 	return Object.assign(properties || {}, {id: id || GraphEditor.GenerateID()});
 }
-
-
-
-

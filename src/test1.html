@@ -65,7 +65,7 @@
 
 		let nodeStyles = GraphEditor.CreateStyles(inputNodeType, featureNodeType, outputNodeType);
 
-		ge = GraphEditor('body', nodeStyles, data);
+		ge = GraphEditor('body', nodeStyles, Object.values(data));
 
 		ge.addNode('input', 'qwe', 'Вход')
 		ge.addNode('output', 'zxc', 'Модель')
