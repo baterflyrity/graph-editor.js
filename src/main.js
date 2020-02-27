@@ -146,7 +146,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 					hierarchical: {
 						direction: "LR",
 						sortMethod: "directed",
-						shakeTowards:"leaves"
+						shakeTowards: "leaves"
 					}
 				}
 			});
@@ -416,6 +416,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		Object.getOwnPropertyNames(editors).filter(classValue => classValue !== exclude).forEach(classValue => editors[classValue].hide());
 	}
 
+
 	// noinspection JSCheckFunctionSignatures
 	// TODO Теперь editors для каждой комбинации класс:тип
 	let classTypeArray = Object.values(scope.classes).map(c => Object.keys(scope.types[c]).map(t => [c, t]));
@@ -494,6 +495,16 @@ GraphEditor.CreateStyles = function (...types) {
 	}
 	return styles
 };
+GraphEditor.GenerateID = function () {
+	let id = [];
+	for (let i = 0; i < 40; i++) id.push((Math.random() * 16 | 0).toString(16));
+	return id.join('');
+}
+GraphEditor.CreateNode = function (id, properties) {
+	//TODO: Care about Vis properties overlap.
+	return Object.assign(properties || {}, {id: id || GraphEditor.GenerateID()});
+}
+
 
 
 

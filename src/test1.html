@@ -47,18 +47,18 @@
 		// window.ge = GraphEditor('body', nodeStyles);
 		let data = {'Курс': 'Курс', 'Став': 'Став', 'Объем': 'Объем', 'Цена': 'Цена', 'Объем 1': 'Объем 1'}
 
-		for (let i = 0; i < 20; i++)
-			data['test' + i] = 'test' + i;
+		// for (let i = 0; i < 20; i++)
+		// 	data['test' + i] = 'test' + i;
 
-		let inputNodeType = GraphEditor.CreateType('0', 'Вход', 'Эллипсы синего цвета', '#8dd0f8', {
+		let inputNodeType = GraphEditor.CreateType('qwe', 'Вход', 'Эллипсы синего цвета', '#8dd0f8', {
 			color: '#8dd0f8',
 			shape: 'circle'
 		});
-		let featureNodeType = GraphEditor.CreateType('1', 'Признак', 'Признаки', '#b7f9c2', {
+		let featureNodeType = GraphEditor.CreateType('asd', 'Признак', 'Признаки', '#b7f9c2', {
 			color: '#b7f9c2',
 			shape: 'ellipse'
 		}, data);
-		let outputNodeType = GraphEditor.CreateType('2', 'Модель', 'Модель', '#80aef5', {
+		let outputNodeType = GraphEditor.CreateType('zxc', 'Модель', 'Модель', '#80aef5', {
 			color: '#80aef5',
 			shape: 'circle'
 		});
@@ -67,11 +67,11 @@
 
 		ge = GraphEditor('body', nodeStyles, data);
 
-		ge.addNode('input', '0', 'Вход')
-		ge.addNode('output', '2', 'Модель')
+		ge.addNode('input', 'qwe', 'Вход')
+		ge.addNode('output', 'zxc', 'Модель')
 
 		for (let col_code in data) {
-			ge.addNode(col_code, '1', col_code);
+			ge.addNode(col_code, 'asd', col_code);
 			ge.addEdge('input', col_code, col_code + '_1', '0');
 			ge.addEdge(col_code, 'output', col_code + '_2', '1');
 		}
