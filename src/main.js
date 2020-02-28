@@ -4,7 +4,7 @@
  edgeStyles - массив стилей рёбер (https://visjs.github.io/vis-network/docs/network/edges.html)
  */
 function GraphEditor(container, nodeStyles, titles = ['Новый узел'], edgeStyles, nodesData, edgesData) {
-//TODO: сделать, чтобы изменение graph.types[class] автоматически применяли (переконструировались меню редакторов)
+	//TODO: сделать, чтобы изменение graph.types[class] автоматически применялись (переконструировались меню редакторов).
 	function AssertVariable(path, owner, library) {
 		owner = owner || window;
 		let variable;
@@ -24,13 +24,46 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 	AssertVariable('modal', jQuery(), 'Semantic UI');
 	AssertVariable('dropdown', jQuery(), 'Semantic UI');
 
+	/**
+	 * Создать событие.
+	 * @param eventName
+	 */
+	function CreateEvent(eventName, eventDescription) {
+		let e = {
+			eventName: eventName,
+			eventDescription: eventDescription,
+			callbacks: {},
+			Subscribe: function (callback, replaceExisting = false, callbackID = undefined) {
+				let id = callbackID || GraphEditor.GenerateID();
+				if (e.callbacks.hasOwnProperty(id) && !replaceExisting)
+					throw `Event ${e.eventName} already has callback with id ${id}. Try to use replaceExisting = true or another callbackID.`;
+				e.callbacks[id] = callback;
+			},
+			Unsubscribe: function (callbackID) {
+				if (e.callbacks.hasOwnProperty(callbackID))
+					delete e.callbacks[callbackID];
+			},
+			TriggerAll: function (...args) {
+				return Object.fromEntries(Object.entries(e.callbacks).map(([callbackID, callback]) => [callbackID, callback(...args)]));
+			},
+			TriggerPipe: function (...args) {
+				let buf = args;
+				for (let callbackID in e.callbacks)
+					buf = e.callbacks[callbackID](buf);
+				return buf;
+			},
+		};
+		return e;
+	}
+
+
 	let scope = {
 		container: jQuery(container).first(),
 		save: () => Download(scope.serialize(), 'graph.json', 'application/json'),
 		addNode: (id, type = 0, label, template = {}) => {
-			scope.graph.storePositions();
+			scope.engine.graph.storePositions();
 			let pos = {x: 0, y: 0};
-			let nodes = scope.data[GraphEditor.ElementClasses.Node.classID].get();
+			let nodes = scope.data[GraphEditor.ElementClasses.node.classID].get();
 			if (nodes.length) {
 				pos.x = nodes.map(n => n.x).reduce((a, b) => a + b) / nodes.length;
 				pos.y = nodes.map(n => n.y).reduce((a, b) => a + b) / nodes.length;
@@ -39,22 +72,43 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 			}
 
 			// TODO Вот из-за этой строки всё ломалось: setTimeout(() => StabilizeFitZoom(), 1);
-			let element = $.extend(true, scope.types[GraphEditor.ElementClasses.Node.classID][type].template, {id: id, type: type, label: label}, pos, template);
-			return scope.data[GraphEditor.ElementClasses.Node.classID].add(element)[0];
+			let element = $.extend(true, scope.types[GraphEditor.ElementClasses.node.classID][type].template, {id: id, type: type, label: label}, pos, template);
+			return scope.data[GraphEditor.ElementClasses.node.classID].add(element)[0];
 		},
 		addEdge: (from, to, id, type = 0, template = {}) => {
-			let edge = Object.assign({}, scope.types[GraphEditor.ElementClasses.Edge.classID][type].template, {id: id, type: type, from: from, to: to}, template);
-			return scope.data[GraphEditor.ElementClasses.Edge.classID].add(edge)[0];
+			let edge = Object.assign({}, scope.types[GraphEditor.ElementClasses.edge.classID][type].template, {id: id, type: type, from: from, to: to}, template);
+			return scope.data[GraphEditor.ElementClasses.edge.classID].add(edge)[0];
 		},
-		removeNode: id => scope.data[GraphEditor.ElementClasses.Node.classID].remove(id),
-		removeEdge: id => scope.data[GraphEditor.ElementClasses.Edge.classID].remove(id),
+		removeNode: id => scope.data[GraphEditor.ElementClasses.node.classID].remove(id),
+		removeEdge: id => scope.data[GraphEditor.ElementClasses.edge.classID].remove(id),
+		engine: {
+			nodes: new vis.DataSet(),
+			edges: new vis.DataSet(),
+			graph: {},
+			CreateNode: (visNode, triggerEvents = true) => scope.engine.nodes.add(triggerEvents ? scope.engine.onCreateNode.TriggerPipe(visNode) : visNode),
+			CreateEdge: (visEdge, triggerEvents = true) => scope.engine.edges.add(triggerEvents ? scope.engine.onCreateEdge.TriggerPipe(visEdge) : visEdge),
+			RemoveNode: (visNodeOrNodeID, triggerEvents = true) => scope.engine.nodes.remove(triggerEvents ? scope.engine.onRemoveNode.TriggerPipe(visNodeOrNodeID) : visNodeOrNodeID),
+			RemoveEdge: (visEdgeOrEdgeID, triggerEvents = true) => scope.engine.edges.remove(triggerEvents ? scope.engine.onRemoveEdge.TriggerPipe(visEdgeOrEdgeID) : visEdgeOrEdgeID),
+			GetNode: nodeID => scope.engine.nodes.get(nodeID),
+			GetEdge: edgeID => scope.engine.edges.get(edgeID),
+			SetNode: (visNode, triggerEvents = true) => scope.engine.nodes.update(triggerEvents ? scope.engine.onSetNode.TriggerPipe(visNode) : visNode),
+			SetEdge: (visEdge, triggerEvents = true) => scope.engine.edges.update(triggerEvents ? scope.engine.onSetEdge.TriggerPipe(visEdge) : visEdge),
+			onCreateNode: CreateEvent('onCreateNode', '(visNode)->visNode'),
+			onCreateEdge: CreateEvent('onCreateEdge', '(visEdge)->visEdge'),
+			onStartEditingNode: CreateEvent('onStartEditingNode', '(visNode)->undefined'),
+			onStartEditingEdge: CreateEvent('onStartEditingEdge', '(visEdge)->undefined'),
+			onSetNode: CreateEvent('onSetNode', '(visNode)->visNode'),
+			onSetEdge: CreateEvent('onSetEdge', '(visEdge)->visEdge'),
+			onRemoveNode: CreateEvent('onRemoveNode', '(visNodeOrNodeID)->visNodeOrNodeID'),
+			onRemoveEdge: CreateEvent('onRemoveEdge', '(visEdgeOrEdgeID)->visEdgeOrEdgeID'),
+		}
 	};
 	scope.data = {
-		[GraphEditor.ElementClasses.Node.classID]: new vis.DataSet(nodesData),
-		[GraphEditor.ElementClasses.Edge.classID]: new vis.DataSet(edgesData),
+		[GraphEditor.ElementClasses.node.classID]: new vis.DataSet(nodesData),
+		[GraphEditor.ElementClasses.edge.classID]: new vis.DataSet(edgesData),
 	};
 	scope.types = {
-		[GraphEditor.ElementClasses.Node.classID]: nodeStyles ? nodeStyles : GraphEditor.CreateStyles_old(
+		[GraphEditor.ElementClasses.node.classID]: nodeStyles ? nodeStyles : GraphEditor.CreateStyles_old(
 			GraphEditor.CreateType_old('0', 'Эллипс', 'Синие эллипсы', 'blue', {
 				color: '#8dd0f8',
 				shape: 'ellipse'
@@ -64,7 +118,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 				shape: 'box'
 			})
 		),
-		[GraphEditor.ElementClasses.Edge.classID]: edgeStyles ? edgeStyles : GraphEditor.CreateStyles_old(
+		[GraphEditor.ElementClasses.edge.classID]: edgeStyles ? edgeStyles : GraphEditor.CreateStyles_old(
 			GraphEditor.CreateType_old('0', 'Сплошное', 'Без штриховки', 'hidden', {
 				arrows: 'to',
 				dashes: false,
@@ -78,65 +132,60 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		),
 	};
 
-	if (!scope.container.length) throw 'Graph editor error: can not find container.';
+	if (!scope.container.length) throw `Graph editor error: can not find container ${container}.`;
 
-	/*
-	 Build functions: (data)->jQuery. Build markup and attach events.
-	 Всего необходимо собрать 4 элемента:
-	 - окно открытия графа
-	 - граф
-	 - меню
-	 - редакторы
-	 */
 
-	/*
-	 startEditingCallback (class, editing graph element) - начало редактирования
-	 endEditingCallback (class, editing graph element) -> corrected graph element - конец редактирования
+	/**
+	 * Call func right after (not guaranteed) current frame.
+	 *
+	 * Use arrow functions instead of bare reference.
+	 *
+	 * @return {number}
 	 */
-	function BuildGraph(startEditingCallback, endEditingCallback) {
+	function Incoming(func) {
+		return setTimeout(func, 0);
+	}
+
+
+	/**
+	 * Crate graph DOM and events, attach to scope. Return jQuery graph object.
+	 * @returns {jQuery}
+	 */
+	function BuildGraph() {
 		let $graph = jQuery('<div class="pane"></div>');
-		let edgeEditorState = 0;
+		let edgeEditingState = 0;
 		let editedElement, editedClass;
-		scope.graph = new vis.Network($graph[0],
+		scope.engine.graph = new vis.Network($graph[0],
 			{
-				nodes: scope.data[GraphEditor.ElementClasses.Node.classID],
-				edges: scope.data[GraphEditor.ElementClasses.Edge.classID]
+				nodes: scope.engine.nodes,
+				edges: scope.engine.edges
 			},
 			{
 				manipulation: {
 					enabled: false,
-					editEdge: function (edgeData, callback) {
-						if (edgeData.from === edgeData.to) callback(null);
+					editEdge: function (visEdge, callback) {
+						if (visEdge.from === visEdge.to) callback(null);
 						else {
-							setTimeout(() => {
-								scope.graph.disableEditMode();
-							}, 1);
-							edgeEditorState = 0;
-							callback(endEditingCallback(GraphEditor.ElementClasses.Edge.classID, edgeData));
+							edgeEditingState = 0;
+							Incoming(() => scope.engine.graph.disableEditMode());
+							callback(scope.engine.onSetEdge.TriggerPipe(visEdge));
 						}
 					},
-					addNode: function (nodeData, callback) {
-						nodeData.type = '0';
-						delete nodeData.label;
-						setTimeout(() => {
-							scope.graph.disableEditMode();
-							//jQuery('#addNode').removeClass('active');
-						}, 1);
-						callback(endEditingCallback(GraphEditor.ElementClasses.Node.classID, nodeData));
+					addNode: function (visNode, callback) {
+						delete visNode.label;
+						Incoming(() => scope.engine.graph.disableEditMode());
+						callback(scope.engine.onCreateNode.TriggerPipe(visNode));
 					},
-					addEdge: function (edgeData, callback) {
-						edgeData.type = '0';
-						delete edgeData.label;
-						delete edgeData.title;
-						setTimeout(() => {
-							scope.graph.disableEditMode();
-							//jQuery('#addEdge').removeClass('active');
-						}, 1);
-						if (edgeData.from !== edgeData.to) callback(endEditingCallback(GraphEditor.ElementClasses.Edge.classID, edgeData));
+					addEdge: function (visEdge, callback) {
+						delete visEdge.label;
+						delete visEdge.title;
+						Incoming(() => scope.engine.graph.disableEditMode());
+						if (visEdge.from !== visEdge.to) callback(scope.engine.onCreateEdge.TriggerPipe(visEdge));
 					}
 				},
 				locale: 'ru',
 				physics: {
+					enabled: true,
 					stabilization: {
 						fit: false
 					}
@@ -149,44 +198,38 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 					}
 				}
 			});
-		scope.graph.addEventListener('select', function (e) {
+		scope.engine.graph.addEventListener('select', function (e) {
 			if (e.nodes.length) {
-				editedElement = scope.data[GraphEditor.ElementClasses.Node.classID].get(e.nodes[0]);
-				editedClass = GraphEditor.ElementClasses.Node.classID;
-				startEditingCallback(editedClass, editedElement);
+				//Start editing node
+				editedElement = scope.engine.GetNode(e.nodes[0]);
+				editedClass = 'node';
+				scope.engine.onStartEditingNode.TriggerAll(editedElement);
 			} else if (e.edges.length === 1) {
-				scope.graph.editEdgeMode();
-				editedElement = scope.data[GraphEditor.ElementClasses.Edge.classID].get(e.edges[0]);
-				editedClass = GraphEditor.ElementClasses.Edge.classID;
-				edgeEditorState = 1;
-				startEditingCallback(editedClass, editedElement);
-			} else if (editedElement && editedClass) endEditingCallback(editedClass, editedElement);
-		});
-
-		$graph.find('canvas').click(function () {
-			if (edgeEditorState === 1)
-				edgeEditorState = 2;
-			else if (edgeEditorState === 2) {
-				edgeEditorState = 0;
-				scope.graph.disableEditMode();
-				scope.graph.unselectAll();
+				//Start editing edge
+				scope.engine.graph.editEdgeMode();
+				editedElement = scope.engine.GetEdge(e.edges[0]);
+				editedClass = 'edge';
+				edgeEditingState = 1;
+				scope.engine.onStartEditingEdge.TriggerAll(editedElement);
+			} else if (editedElement && editedClass) {
+				//End editing node/edge and set (update) new data.
+				if (editedClass === 'node')
+					scope.engine.SetNode(editedElement);
+				else
+					scope.engine.SetEdge(editedElement);
+				editedClass = null;
+				editedElement = null;
 			}
 		});
-
-		scope.serialize = function () {
-			scope.graph.storePositions();
-			// noinspection JSCheckFunctionSignatures
-			return JSON.stringify(Object.fromEntries(Object.entries(GraphEditor.ElementClasses).map(([className, classValue]) => [className, scope.data[classValue.classID].get()])));
-		};
-		scope.deserialize = function (json) {
-			let buf = JSON.parse(json);
-			// noinspection JSCheckFunctionSignatures
-			Object.entries(GraphEditor.ElementClasses).forEach(([className, classValue]) => {
-				scope.data[classValue.classID].clear();
-				buf[className].forEach(x => scope.data[classValue.classID].add(x));
-			});
-			StabilizeFitZoom();
-		};
+		$graph.find('canvas').click(function () {
+			if (edgeEditingState === 1)
+				edgeEditingState = 2;
+			else if (edgeEditingState === 2) {
+				edgeEditingState = 0;
+				scope.engine.graph.disableEditMode();
+				scope.engine.graph.unselectAll();
+			}
+		});
 		return $graph;
 	}
 
@@ -297,7 +340,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 														<span class="description">${elClass[t].description}</span>
 													</div>`);
 		let labelBuf;
-		if (elementClass === GraphEditor.ElementClasses.Edge.classID) {
+		if (elementClass === GraphEditor.ElementClasses.edge.classID) {
 			labelBuf = '<div class="label-text" contenteditable="true" data-placeholder="Введите название">Название</div>';
 		} else if (scope.types[elementClass][elementType]['titles']) {
 			let tbuf = Object.keys(titles).map(t => `<div class="item" data-value="${t}" data-text='${titles[t]}'>${titles[t]}</span></div>`);
@@ -372,30 +415,31 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 	}
 
 	function Update(elementClass, element, save) {
-		// TODO Упростил, не понял зачем ты столько кода городил, есть в этом практический смысл?
+		scope.graph.storePositions();
+		let pos = scope.data[elementClass].get(element.id);
+		element = Object.assign(element, scope.types[elementClass][element.type].template, pos && pos.hasOwnProperty('x') ? {x: pos.x, y: pos.y} : {});
 		if (save) {
-			delete element['x'];
-			delete element['y'];
-			scope.data[elementClass].update(element);
+			scope.data[elementClass].remove(element.id);
+			scope.data[elementClass].add(element);
 		}
 		return element;
 	}
 
 	function StabilizeFitZoom() {
-		scope.graph.stabilize();
+		scope.engine.graph.stabilize();
 		FitZoom();
 	}
 
 	function FitZoom() {
-		scope.graph.storePositions();
-		let nodes = scope.data[GraphEditor.ElementClasses.Node.classID].get();
+		scope.engine.graph.storePositions();
+		let nodes = scope.engine.nodes.get();
 		let x, y;
 		if (!nodes.length) x = y = 0;
 		else {
 			x = nodes.map(n => n.x).reduce((a, b) => a + b) / nodes.length;
 			y = nodes.map(n => n.y).reduce((a, b) => a + b) / nodes.length;
 		}
-		scope.graph.moveTo({
+		scope.engine.graph.moveTo({
 			position: {x: x, y: y},
 			scale: 2,
 			animation: true
@@ -422,10 +466,10 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 	let editors = Object.fromEntries([].concat(...classTypeArray).map(classType => [
 		classType[0] + ':' + classType[1],  // TODO Ужасная конструкция, надо подумать как это сделать по человечески
 		BuildEditor(classType[0], classType[1], function (elementClass, element) {
-			scope.graph.disableEditMode();
+			scope.engine.graph.disableEditMode();
 			Update(elementClass, element, true);
 		}, function (elementClass, element) {
-			scope.graph.disableEditMode();
+			scope.engine.graph.disableEditMode();
 			scope.data[elementClass].remove(element.id);
 		})]));
 
@@ -444,7 +488,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		icon: 'plus square',
 		click: function () {
 			HideEditors();
-			scope.graph.addNodeMode();
+			scope.engine.graph.addNodeMode();
 		}
 	}, {
 		name: 'addEdge',
@@ -452,7 +496,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		icon: 'long arrow alternate right',
 		click: function () {
 			HideEditors();
-			scope.graph.addEdgeMode();
+			scope.engine.graph.addEdgeMode();
 		}
 	}, {
 		name: 'fitZoom',
@@ -512,7 +556,7 @@ GraphEditor.CreateElement = function (elementID, elementType, elementPropertiesV
 		elementType: elementType
 	};
 }
-GraphEditor.ElementClasses = Object.freeze({Node: GraphEditor.CreateElementClass('Node', {x: 0, y: 0}), Edge: GraphEditor.CreateElementClass('Edge', {from: 0, to: 0})}); //INFO: Now only two classes of elements ara available: nodes and edges. So they are hardcoded.
+GraphEditor.ElementClasses = Object.freeze({node: GraphEditor.CreateElementClass('node', {x: 0, y: 0}), edge: GraphEditor.CreateElementClass('edge', {from: 0, to: 0})}); //INFO: Now only two classes of elements ara available: nodes and edges. So they are hardcoded.
 GraphEditor.PropertyClasses = Object.freeze({Text: 'Текстовое поле'});
 
 GraphEditor.CreateType_old = function (id, name, description, color, template, titles) {
@@ -541,4 +585,16 @@ GraphEditor.GenerateID = function () {
 GraphEditor.CreateNode = function (id, properties) {
 	//TODO: Care about Vis properties overlap.
 	return Object.assign(properties || {}, {id: id || GraphEditor.GenerateID()});
+}
+
+
+//Vis Dataset Monkeypatch
+vis.DataSet.prototype._updateItem = function (item) {
+	let id = item[this._idProp];
+	if (id == null) throw new Error("Cannot update item: item has no id (item: " + JSON.stringify(item) + ")");
+	let d = this._data.get(id);
+	if (!d) throw new Error("Cannot update item: no item with id " + id + " found");
+	Object.getOwnPropertyNames(d).filter(p => p !== 'x' && p !== 'y').forEach(p => delete d[p]);
+	Object.getOwnPropertyNames(item).forEach(p => d[p] = item[p]);
+	return id;
 }

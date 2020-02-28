@@ -76,6 +76,9 @@
 			ge.addEdge(col_code, 'output', col_code + '_2', '1');
 		}
 
+		ge.engine.nodes.add(ge.data[GraphEditor.ElementClasses.node.classID].get());
+		ge.engine.edges.add(ge.data[GraphEditor.ElementClasses.edge.classID].get());
+
 
 	});
 </script>
