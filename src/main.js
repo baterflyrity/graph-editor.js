@@ -63,17 +63,32 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 				return Object.fromEntries(Object.entries(e.callbacks).map(([callbackID, callback]) => [callbackID, callback(...args)]));
 			},
 			TriggerPipe: function (...args) {
-				let buf = args;
-				for (let callbackID in e.callbacks)
-					buf = e.callbacks[callbackID](buf);
-				// Return result not array with result in case of single argument.
-				if (args.length === 0)
+				let callbacks = Object.values(e.callbacks);
+				if (args.length === 0) {
+					callbacks.forEach(cb => cb());
 					return;
-				if (args.length === 1)
-					return buf[0];
+				}
+				if (args.length === 1) {
+					let buf = args[0];
+					callbacks.forEach(cb => buf = cb(buf));
+					return buf;
+				}
+				let buf = args;
+				callbacks.forEach(cb => buf = cb(...buf));
 				return buf;
 			},
 		};
+		return e;
+	}
+
+	function CreateNestedEvent(eventName, eventDescription, parentPipeTriggeredEventsArray, paretDataAdapter = (...args) =>
+
+...
+	args
+)
+	{//FIXME: make default adapters
+		let e = CreateEvent(eventName, eventDescription);
+
 		return e;
 	}
 
@@ -109,6 +124,41 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		if (!scope.GetElementType(rawElementOrElement.elementTypeID))
 			throw `Can not create element of type ${rawElementOrElement.elementTypeID}. Ensure this type was created.`;
 		return rawElementOrElement;
+	}
+
+	function CopyObject(object) {
+		if (typeof (object) !== 'object') return null;
+		return Object.assign({}, object);
+	}
+
+	function CreateDefaults() {
+		//Element classes
+		scope.SetElementClass('node', {x: 0, y: 0});
+		scope.SetElementClass('edge', {from: 0, to: 0});
+		//Property classes
+		scope.SetPropertyClass('text', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}" title="${elementProperty.propertyName}" contenteditable="true">${propertyValue}</div>`, $propertyDOM => $propertyDOM.text());
+		//Element styles
+		scope.SetElementStyle('defaultNode', 'node', {
+			color: "#80aef5",
+			shape: "circle",
+			label: 'Узел'
+		});
+		scope.SetElementStyle('defaultEdge', 'edge', {
+			arrows: "to",
+			dashes: false,
+			color: {inherit: "both"},
+		});
+		scope.SetElementStyle('dashedEdge', 'edge', {
+			arrows: "to",
+			dashes: true,
+			color: {inherit: "both"},
+		});
+		//Element properties
+		scope.SetElementProperty('label', 'text', 'Название', 'Узел');
+		//Element types
+		scope.SetElementType('defaultNode', 'node', 'Узел', 'Стандартный вид', 'blue', ['label'], ['defaultNode']);
+		scope.SetElementType('defaultEdge', 'edge', 'Сплошное ребро', 'Обычное ребро', 'hidden', [], ['defaultEdge']);
+		scope.SetElementType('dashedEdge', 'edge', 'Штрихованное ребро', 'Пунктир', 'hidden', [], ['dashedEdge']);
 	}
 
 
@@ -150,7 +200,10 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 			},
 			onCreateNode: CreateEvent('onCreateNode', '(visNode)->visNode'),
 			onSetNode: CreateEvent('onSetNode', '(visNode)->visNode'),
-			GetNode: nodeID => scope.engine.nodes.get(nodeID),
+			GetNode: function (nodeID) {
+				scope.engine.graph.storePositions();
+				return scope.engine.nodes.get(nodeID);
+			},
 			RemoveNode: (visNodeOrNodeID, triggerEvents = true) => scope.engine.nodes.remove(triggerEvents ? scope.engine.onRemoveNode.TriggerPipe(visNodeOrNodeID) : visNodeOrNodeID),
 			onRemoveNode: CreateEvent('onRemoveNode', '(visNodeOrNodeID)->visNodeOrNodeID'),
 			onStartEditingNode: CreateEvent('onStartEditingNode', '(visNode)->undefined'),
@@ -185,7 +238,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		},
 		onCreateElementClass: CreateEvent('onCreateElementClass', '(elementClass)->elementClass'),
 		onSetElementClass: CreateEvent('onSetElementClass', '(elementClass)->elementClass'),
-		GetElementClass: classID => typeof (classID) === 'undefined' ? Object.values(scope.elementClasses) : scope.elementClasses[classID] || null,
+		GetElementClass: classID => typeof (classID) === 'undefined' ? Object.values(scope.elementClasses) : CopyObject(scope.elementClasses[classID]),
 		RemoveElementClass: function (classIDOrElementClass, triggerEvents = true) {
 			if (triggerEvents) classIDOrElementClass = scope.onRemoveElementClass.TriggerPipe(classIDOrElementClass);
 			if (typeof (classIDOrElementClass) === 'undefined') return [];
@@ -211,7 +264,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		},
 		onCreatePropertyClass: CreateEvent('onCreatePropertyClass', '(propertyClass)->propertyClass'),
 		onSetPropertyClass: CreateEvent('onSetPropertyClass', '(propertyClass)->propertyClass'),
-		GetPropertyClass: propertyClassID => typeof (propertyClassID) === 'undefined' ? Object.values(scope.propertyClasses) : scope.propertyClasses[propertyClassID] || null,
+		GetPropertyClass: propertyClassID => typeof (propertyClassID) === 'undefined' ? Object.values(scope.propertyClasses) : CopyObject(scope.propertyClasses[propertyClassID]),
 		RemovePropertyClass: function (propertyClassIDOrPropertyClass, triggerEvents = true) {
 			if (triggerEvents) propertyClassIDOrPropertyClass = scope.onRemovePropertyClass.TriggerPipe(propertyClassIDOrPropertyClass);
 			if (typeof (propertyClassIDOrPropertyClass) === 'undefined') return [];
@@ -237,7 +290,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		},
 		onCreateElementStyle: CreateEvent('onCreateElementStyle', '(elementStyle)->elementStyle'),
 		onSetElementStyle: CreateEvent('onSetElementStyle', '(elementStyle)->elementStyle'),
-		GetElementStyle: styleID => typeof (styleID) === 'undefined' ? Object.values(scope.elementStyles) : scope.elementStyles[styleID] || null,
+		GetElementStyle: styleID => typeof (styleID) === 'undefined' ? Object.values(scope.elementStyles) : CopyObject(scope.elementStyles[styleID]),
 		RemoveElementStyle: function (styleIDOrElementStyle, triggerEvents = true) {
 			if (triggerEvents) styleIDOrElementStyle = scope.onRemoveElementStyle.TriggerPipe(styleIDOrElementStyle);
 			if (typeof (styleIDOrElementStyle) === 'undefined') return [];
@@ -264,7 +317,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		},
 		onCreateElementProperty: CreateEvent('onCreateElementProperty', '(elementProperty)->elementProperty'),
 		onSetElementProperty: CreateEvent('onSetElementProperty', '(elementProperty)->elementProperty'),
-		GetElementProperty: propertyID => typeof (propertyID) === 'undefined' ? Object.values(scope.elementProperties) : scope.elementProperties[propertyID] || null,
+		GetElementProperty: propertyID => typeof (propertyID) === 'undefined' ? Object.values(scope.elementProperties) : CopyObject(scope.elementProperties[propertyID]),
 		RemoveElementProperty: function (propertyIDOrElementProperty, triggerEvents = true) {
 			if (triggerEvents) propertyIDOrElementProperty = scope.onRemoveElementProperty.TriggerPipe(propertyIDOrElementProperty);
 			if (typeof (propertyIDOrElementProperty) === 'undefined') return [];
@@ -301,7 +354,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		onValidateElementType: CreateEvent('onValidateElementType', '(rawElementType)->rawElementType'),
 		onCreateElementType: CreateEvent('onCreateElementType', '(elementType)->elementType'),
 		onSetElementType: CreateEvent('onSetElementType', '(elementType)->elementType'),
-		GetElementType: typeID => typeof (typeID) === 'undefined' ? Object.values(scope.elementTypes) : scope.elementTypes[typeID] || null,
+		GetElementType: typeID => typeof (typeID) === 'undefined' ? Object.values(scope.elementTypes) : CopyObject(scope.elementTypes[typeID]),
 		RemoveElementType: function (typeIDOrElementType, triggerEvents = true) {
 			if (triggerEvents) typeIDOrElementType = scope.onRemoveElementType.TriggerPipe(typeIDOrElementType);
 			if (typeof (typeIDOrElementType) === 'undefined') return [];
@@ -315,21 +368,21 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 
 		//region Elements manipulation
 		elements: {},
-		SetElement: function (elementID, elementTypeID, elementPropertiesValuesDict = {}, elementClassArguments = {}, triggerEvents = true) {
+		SetElement: function (elementID, elementTypeID, elementPropertiesValuesDict = {}, elementClassArguments = {}, nestedGraph = {}, triggerEvents = true) {
 			let element = {
 				elementID: elementID,
 				elementTypeID: elementTypeID,
 				elementPropertiesValuesDict: elementPropertiesValuesDict,
 				elementClassArguments: elementClassArguments,
+				nestedGraph: nestedGraph,
 			}
 			if (triggerEvents)
 				element = scope.onValidateElement.TriggerPipe(element);
 			element = ValidateElement(element);
 			let elementType = scope.GetElementType(element.elementTypeID);
 			element.propertiesValues = Object.assign({}, elementType.propertiesValues, elementPropertiesValuesDict);
-			element.nestedGraph = {};
 			element.cachedTypedPropertiesValues = {[element.elementTypeID]: Object.assign({}, element.propertiesValues)};
-			element.visTemplate = Object.assign({}, elementType.visTemplate, elementClassArguments);
+			element.visTemplate = Object.assign({}, elementType.visTemplate, elementClassArguments, {id: element.elementID});
 			let event = !scope.GetElement(element.elementID) ? scope.onCreateElement : scope.onSetElement;
 			element = triggerEvents ? event.TriggerPipe(element) : element;
 			scope.elements[element.elementID] = ValidateElement(element);
@@ -338,7 +391,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		onValidateElement: CreateEvent('onValidateElement', '(rawElement)->rawElement'),
 		onCreateElement: CreateEvent('onCreateElement', '(element)->element'),
 		onSetElement: CreateEvent('onSetElement', '(element)->element'),
-		GetElement: elementID => typeof (elementID) === 'undefined' ? Object.values(scope.elements) : scope.elements[elementID] || null,
+		GetElement: elementID => typeof (elementID) === 'undefined' ? Object.values(scope.elements) : CopyObject(scope.elements[elementID]),
 		RemoveElement: function (elementIDOrElement, triggerEvents = true) {
 			if (triggerEvents) elementIDOrElement = scope.onRemoveElement.TriggerPipe(elementIDOrElement);
 			if (typeof (elementIDOrElement) === 'undefined') return [];
@@ -380,6 +433,10 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 			})
 		),
 	};
+
+
+	CreateDefaults();
+
 
 	if (!scope.container.length) throw `Graph editor error: can not find container ${container}.`;
 
