@@ -41,54 +41,68 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 	AssertVariable('dropdown', jQuery(), 'Semantic UI');
 
 	/**
+	 * Get only unique PRIMITIVE values from array.
+	 * @param array {any[]}
+	 * @returns {any[]}
+	 */
+	function GetArrayUniques(array) {
+		return [...new Set(array)];
+	}
+
+	/**
 	 * Создать событие.
 	 * @param eventName
+	 * @param eventType {'pipe','broadcast'} - Тип события. Pipe: композиция подписчиков, broadcast: независимые подписчики.
 	 */
-	function CreateEvent(eventName, eventDescription) {
+	function CreateEvent(eventName, eventDescription, eventType) {
 		let e = {
 			eventName: eventName,
 			eventDescription: eventDescription,
+			eventType: eventType,
 			callbacks: {},
 			Subscribe: function (callback, replaceExisting = false, callbackID = undefined) {
 				let id = callbackID || GraphEditor.GenerateID();
 				if (e.callbacks.hasOwnProperty(id) && !replaceExisting)
 					throw `Event ${e.eventName} already has callback with id ${id}. Try to use replaceExisting = true or another callbackID.`;
 				e.callbacks[id] = callback;
+				return [id];
 			},
 			Unsubscribe: function (callbackID) {
-				if (e.callbacks.hasOwnProperty(callbackID))
+				if (e.callbacks.hasOwnProperty(callbackID)) {
 					delete e.callbacks[callbackID];
-			},
-			TriggerAll: function (...args) {
-				return Object.fromEntries(Object.entries(e.callbacks).map(([callbackID, callback]) => [callbackID, callback(...args)]));
-			},
-			TriggerPipe: function (...args) {
-				let callbacks = Object.values(e.callbacks);
-				if (args.length === 0) {
-					callbacks.forEach(cb => cb());
-					return;
+					return [callbackID];
 				}
-				if (args.length === 1) {
-					let buf = args[0];
-					callbacks.forEach(cb => buf = cb(buf));
+				return null;
+			},
+			Trigger: function (...args) {
+				if (e.eventType === 'pipe') {
+					let callbacks = Object.values(e.callbacks);
+					if (args.length === 0) {
+						callbacks.forEach(cb => cb());
+						return;
+					}
+					if (args.length === 1) {
+						let buf = args[0];
+						callbacks.forEach(cb => buf = cb(buf));
+						return buf;
+					}
+					let buf = args;
+					callbacks.forEach(cb => buf = cb(...buf));
 					return buf;
-				}
-				let buf = args;
-				callbacks.forEach(cb => buf = cb(...buf));
-				return buf;
+				} else if (e.eventType === 'broadcast') return Object.fromEntries(Object.entries(e.callbacks).map(([callbackID, callback]) => [callbackID, callback(...args)]));
+				else throw `Unknown event type ${e.eventType}. Can only trigger pipe or broadcast events.`;
 			},
 		};
 		return e;
 	}
 
-	function CreateNestedEvent(eventName, eventDescription, parentPipeTriggeredEventsArray, paretDataAdapter = (...args) =>
-
-...
-	args
-)
-	{//FIXME: make default adapters
-		let e = CreateEvent(eventName, eventDescription);
-
+	function CreateNestedEvent(eventName, eventDescription = undefined, ...parentEvents) {
+		let e = CreateEvent(eventName, eventDescription, 'nested');
+		e.parentEvents = parentEvents;
+		e.eventDescription = e.eventDescription || GetArrayUniques(e.parentEvents.map(pe => pe.eventDescription)).join('; ');
+		delete e.callbacks;
+		e.Subscribe = (...eventConstructorArgs) => e.parentEvents.map(pe => pe.Subscribe(...eventConstructorArgs));
+		e.Unsubscribe = (...eventConstructorArgs) => e.parentEvents.map(pe => pe.Unsubscribe(...eventConstructorArgs));
 		return e;
 	}
 
@@ -131,12 +145,24 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		return Object.assign({}, object);
 	}
 
+
 	function CreateDefaults() {
 		//Element classes
 		scope.SetElementClass('node', {x: 0, y: 0});
 		scope.SetElementClass('edge', {from: 0, to: 0});
 		//Property classes
-		scope.SetPropertyClass('text', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}" title="${elementProperty.propertyName}" contenteditable="true">${propertyValue}</div>`, $propertyDOM => $propertyDOM.text());
+		scope.SetPropertyClass('text', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}" title="${elementProperty.propertyName}" data-placeholder="${elementProperty.propertyName}" contenteditable="true">${propertyValue}</div>`, $propertyDOM => $propertyDOM.text());
+		scope.SetPropertyClass('select', (elementProperty, propertyValue) => {
+			let availableOptions = elementProperty.propertyDefaultValue.map(option => `<div class="item" data-value="${option}" data-text='${option}'>
+														<span class="description">${option}</span>
+													</div>`);
+			return jQuery(`<div data-property="${elementProperty.propertyID}" class="ui inline dropdown">
+								<input type="hidden" value="${elementProperty.propertyDefaultValue[0]}">
+								<div title="${elementProperty.propertyName}" data-placeholder="${elementProperty.propertyName}" class="text">${elementProperty.propertyDefaultValue[0]}</div>
+								<i class="dropdown icon"></i>
+								<div class="menu">${availableOptions.join('')}</div>
+							</div>`).dropdown().dropdown('set exactly', '' + propertyValue);
+		}, $propertyDOM => $propertyDOM.dropdown('get value'));
 		//Element styles
 		scope.SetElementStyle('defaultNode', 'node', {
 			color: "#80aef5",
@@ -161,6 +187,41 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		scope.SetElementType('dashedEdge', 'edge', 'Штрихованное ребро', 'Пунктир', 'hidden', [], ['dashedEdge']);
 	}
 
+	function CreateBindings() {
+		scope.onUpdateElement.Subscribe(function (element) {
+			if (element.elementPropertiesValues.hasOwnProperty('label'))
+				element.visTemplate.label = element.elementPropertiesValues.label;
+			let elementType = scope.GetElementType(element.elementTypeID);
+			if (!!elementType) {
+				if (elementType.elementClassID === 'node') scope.engine.SetNode(element.visTemplate);
+				else if (elementType.elementClassID === 'edge') scope.engine.SetEdge(element.visTemplate);
+			}
+			return element;
+		});
+		scope.onRemoveElement.Subscribe(function (elementIDOrElement) {
+			let id = typeof (elementIDOrElement) === 'object' ? elementIDOrElement.elementID : elementIDOrElement;
+			let element = scope.GetElement(id);
+			if (!!element) {
+				let elementType = scope.GetElementType(element.elementTypeID);
+				if (!!elementType) {
+					if (elementType.elementClassID === 'node') scope.engine.RemoveNode(id);
+					else if (elementType.elementClassID === 'edge') scope.engine.RemoveEdge(id);
+				}
+			}
+			return element;
+		});
+	}
+
+	function UpdateNodesPositions() {
+		let nodes = scope.engine.nodes.get();
+		scope.engine.graph.storePositions();
+		let positions = scope.engine.nodes.get();
+		scope.engine.nodes.update(nodes.map((n, i) => {
+			n.x = positions[i].x;
+			n.y = positions[i].y;
+			return n;
+		}));
+	}
 
 	let scope = {
 		container: jQuery(container).first(),
@@ -190,38 +251,46 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 
 		engine: {
 			graph: {},
+			onStartEditing: CreateEvent('onStartEditing', '(elementClass(node|edge), visElement)->undefined', 'broadcast'),
+			onStopEditing: CreateEvent('onStopEditing', '(elementClass(node|edge), visElement)->undefined', 'broadcast'),
 
 			//region Nodes manipulation
 			nodes: new vis.DataSet(),
 			SetNode: function (visNode, triggerEvents = true) {
 				visNode = ValidateVisNode(visNode);
-				if (!scope.engine.GetNode(visNode.id)) return scope.engine.nodes.add(ValidateVisNode(triggerEvents ? scope.engine.onCreateNode.TriggerPipe(visNode) : visNode));
-				return scope.engine.nodes.update(ValidateVisNode(triggerEvents ? scope.engine.onSetNode.TriggerPipe(visNode) : visNode));
+				if (!scope.engine.GetNode(visNode.id)) return scope.engine.nodes.add(ValidateVisNode(triggerEvents ? scope.engine.onCreateNode.Trigger(visNode) : visNode));
+				return scope.engine.nodes.update(ValidateVisNode(triggerEvents ? scope.engine.onSetNode.Trigger(visNode) : visNode));
 			},
-			onCreateNode: CreateEvent('onCreateNode', '(visNode)->visNode'),
-			onSetNode: CreateEvent('onSetNode', '(visNode)->visNode'),
+			onCreateNode: CreateEvent('onCreateNode', '(visNode)->visNode', 'pipe'),
+			onSetNode: CreateEvent('onSetNode', '(visNode)->visNode', 'pipe'),
 			GetNode: function (nodeID) {
-				scope.engine.graph.storePositions();
+				UpdateNodesPositions();
+				// let node = scope.engine.nodes.get(nodeID);
+				// if (!node) return node;
+				// scope.engine.graph.storePositions();
+				// let pos = scope.engine.nodes.get(nodeID);
+				// node.x = pos.x;
+				// node.y = pos.y;
+				// scope.engine.nodes.update(node);
+				// return node;
 				return scope.engine.nodes.get(nodeID);
 			},
-			RemoveNode: (visNodeOrNodeID, triggerEvents = true) => scope.engine.nodes.remove(triggerEvents ? scope.engine.onRemoveNode.TriggerPipe(visNodeOrNodeID) : visNodeOrNodeID),
-			onRemoveNode: CreateEvent('onRemoveNode', '(visNodeOrNodeID)->visNodeOrNodeID'),
-			onStartEditingNode: CreateEvent('onStartEditingNode', '(visNode)->undefined'),
+			RemoveNode: (visNodeOrNodeID, triggerEvents = true) => scope.engine.nodes.remove(triggerEvents ? scope.engine.onRemoveNode.Trigger(visNodeOrNodeID) : visNodeOrNodeID),
+			onRemoveNode: CreateEvent('onRemoveNode', '(visNodeOrNodeID)->visNodeOrNodeID', 'pipe'),
 			//endregion
 
 			//region Edges manipulation
 			edges: new vis.DataSet(),
 			SetEdge: function (visEdge, triggerEvents = true) {
 				visEdge = ValidateVisEdge(visEdge);
-				if (!scope.engine.GetEdge(visEdge.id)) return scope.engine.edges.add(ValidateVisEdge(triggerEvents ? scope.engine.onCreateEdge.TriggerPipe(visEdge) : visEdge));
-				return scope.engine.edges.update(ValidateVisEdge(triggerEvents ? scope.engine.onSetEdge.TriggerPipe(visEdge) : visEdge));
+				if (!scope.engine.GetEdge(visEdge.id)) return scope.engine.edges.add(ValidateVisEdge(triggerEvents ? scope.engine.onCreateEdge.Trigger(visEdge) : visEdge));
+				return scope.engine.edges.update(ValidateVisEdge(triggerEvents ? scope.engine.onSetEdge.Trigger(visEdge) : visEdge));
 			},
-			onCreateEdge: CreateEvent('onCreateEdge', '(visEdge)->visEdge'),
-			onSetEdge: CreateEvent('onSetEdge', '(visEdge)->visEdge'),
+			onCreateEdge: CreateEvent('onCreateEdge', '(visEdge)->visEdge', 'pipe'),
+			onSetEdge: CreateEvent('onSetEdge', '(visEdge)->visEdge', 'pipe'),
 			GetEdge: edgeID => scope.engine.edges.get(edgeID),
-			RemoveEdge: (visEdgeOrEdgeID, triggerEvents = true) => scope.engine.edges.remove(triggerEvents ? scope.engine.onRemoveEdge.TriggerPipe(visEdgeOrEdgeID) : visEdgeOrEdgeID),
-			onRemoveEdge: CreateEvent('onRemoveEdge', '(visEdgeOrEdgeID)->visEdgeOrEdgeID'),
-			onStartEditingEdge: CreateEvent('onStartEditingEdge', '(visEdge)->undefined'),
+			RemoveEdge: (visEdgeOrEdgeID, triggerEvents = true) => scope.engine.edges.remove(triggerEvents ? scope.engine.onRemoveEdge.Trigger(visEdgeOrEdgeID) : visEdgeOrEdgeID),
+			onRemoveEdge: CreateEvent('onRemoveEdge', '(visEdgeOrEdgeID)->visEdgeOrEdgeID', 'pipe'),
 			//endregion
 		},
 
@@ -233,21 +302,21 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 				visTemplate: visTemplate
 			};
 			let event = !scope.GetElementClass(elemtnClass.classID) ? scope.onCreateElementClass : scope.onSetElementClass;
-			scope.elementClasses[elemtnClass.classID] = triggerEvents ? event.TriggerPipe(elemtnClass) : elemtnClass;
+			scope.elementClasses[elemtnClass.classID] = triggerEvents ? event.Trigger(elemtnClass) : elemtnClass;
 			return [elemtnClass.classID];
 		},
-		onCreateElementClass: CreateEvent('onCreateElementClass', '(elementClass)->elementClass'),
-		onSetElementClass: CreateEvent('onSetElementClass', '(elementClass)->elementClass'),
+		onCreateElementClass: CreateEvent('onCreateElementClass', '(elementClass)->elementClass', 'pipe'),
+		onSetElementClass: CreateEvent('onSetElementClass', '(elementClass)->elementClass', 'pipe'),
 		GetElementClass: classID => typeof (classID) === 'undefined' ? Object.values(scope.elementClasses) : CopyObject(scope.elementClasses[classID]),
 		RemoveElementClass: function (classIDOrElementClass, triggerEvents = true) {
-			if (triggerEvents) classIDOrElementClass = scope.onRemoveElementClass.TriggerPipe(classIDOrElementClass);
+			if (triggerEvents) classIDOrElementClass = scope.onRemoveElementClass.Trigger(classIDOrElementClass);
 			if (typeof (classIDOrElementClass) === 'undefined') return [];
 			let id = typeof (classIDOrElementClass) === 'object' ? classIDOrElementClass.classID : classIDOrElementClass;
 			if (!scope.elementClasses.hasOwnProperty(id)) return [];
 			delete scope.elementClasses[id];
 			return [id];
 		},
-		onRemoveElementClass: CreateEvent('onRemoveElementClass', '(classIDOrElementClass)->classIDOrElementClass'),
+		onRemoveElementClass: CreateEvent('onRemoveElementClass', '(classIDOrElementClass)->classIDOrElementClass', 'pipe'),
 		//endregion
 
 		//region Property classes manipulation
@@ -259,21 +328,21 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 				propertyParser: propertyParser,
 			};
 			let event = !scope.GetPropertyClass(propertyClass.propertyClassID) ? scope.onCreatePropertyClass : scope.onSetPropertyClass;
-			scope.propertyClasses[propertyClass.propertyClassID] = triggerEvents ? event.TriggerPipe(propertyClass) : propertyClass;
+			scope.propertyClasses[propertyClass.propertyClassID] = triggerEvents ? event.Trigger(propertyClass) : propertyClass;
 			return [propertyClass.propertyClassID];
 		},
-		onCreatePropertyClass: CreateEvent('onCreatePropertyClass', '(propertyClass)->propertyClass'),
-		onSetPropertyClass: CreateEvent('onSetPropertyClass', '(propertyClass)->propertyClass'),
+		onCreatePropertyClass: CreateEvent('onCreatePropertyClass', '(propertyClass)->propertyClass', 'pipe'),
+		onSetPropertyClass: CreateEvent('onSetPropertyClass', '(propertyClass)->propertyClass', 'pipe'),
 		GetPropertyClass: propertyClassID => typeof (propertyClassID) === 'undefined' ? Object.values(scope.propertyClasses) : CopyObject(scope.propertyClasses[propertyClassID]),
 		RemovePropertyClass: function (propertyClassIDOrPropertyClass, triggerEvents = true) {
-			if (triggerEvents) propertyClassIDOrPropertyClass = scope.onRemovePropertyClass.TriggerPipe(propertyClassIDOrPropertyClass);
+			if (triggerEvents) propertyClassIDOrPropertyClass = scope.onRemovePropertyClass.Trigger(propertyClassIDOrPropertyClass);
 			if (typeof (propertyClassIDOrPropertyClass) === 'undefined') return [];
 			let id = typeof (propertyClassIDOrPropertyClass) === 'object' ? propertyClassIDOrPropertyClass.propertyClassID : propertyClassIDOrPropertyClass;
 			if (!scope.propertyClasses.hasOwnProperty(id)) return [];
 			delete scope.propertyClasses[id];
 			return [id];
 		},
-		onRemovePropertyClass: CreateEvent('onRemovePropertyClass', '(propertyClassIDOrPropertyClass)->propertyClassIDOrPropertyClass'),
+		onRemovePropertyClass: CreateEvent('onRemovePropertyClass', '(propertyClassIDOrPropertyClass)->propertyClassIDOrPropertyClass', 'pipe'),
 		//endregion
 
 		//region Element styles manipulation
@@ -285,21 +354,21 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 				visTemplate: visTemplate,
 			};
 			let event = !scope.GetElementStyle(elementStyle.styleID) ? scope.onCreateElementStyle : scope.onSetElementStyle;
-			scope.elementStyles[elementStyle.styleID] = triggerEvents ? event.TriggerPipe(elementStyle) : elementStyle;
+			scope.elementStyles[elementStyle.styleID] = triggerEvents ? event.Trigger(elementStyle) : elementStyle;
 			return [elementStyle.styleID];
 		},
-		onCreateElementStyle: CreateEvent('onCreateElementStyle', '(elementStyle)->elementStyle'),
-		onSetElementStyle: CreateEvent('onSetElementStyle', '(elementStyle)->elementStyle'),
+		onCreateElementStyle: CreateEvent('onCreateElementStyle', '(elementStyle)->elementStyle', 'pipe'),
+		onSetElementStyle: CreateEvent('onSetElementStyle', '(elementStyle)->elementStyle', 'pipe'),
 		GetElementStyle: styleID => typeof (styleID) === 'undefined' ? Object.values(scope.elementStyles) : CopyObject(scope.elementStyles[styleID]),
 		RemoveElementStyle: function (styleIDOrElementStyle, triggerEvents = true) {
-			if (triggerEvents) styleIDOrElementStyle = scope.onRemoveElementStyle.TriggerPipe(styleIDOrElementStyle);
+			if (triggerEvents) styleIDOrElementStyle = scope.onRemoveElementStyle.Trigger(styleIDOrElementStyle);
 			if (typeof (styleIDOrElementStyle) === 'undefined') return [];
 			let id = typeof (styleIDOrElementStyle) === 'object' ? styleIDOrElementStyle.styleID : styleIDOrElementStyle;
 			if (!scope.elementStyles.hasOwnProperty(id)) return [];
 			delete scope.elementStyles[id];
 			return [id];
 		},
-		onRemoveElementStyle: CreateEvent('onRemoveElementStyle', '(styleIDOrElementStyle)->styleIDOrElementStyle'),
+		onRemoveElementStyle: CreateEvent('onRemoveElementStyle', '(styleIDOrElementStyle)->styleIDOrElementStyle', 'pipe'),
 		//endregion
 
 		//region Element properties manipulation
@@ -312,21 +381,21 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 				propertyDefaultValue: propertyDefaultValue,
 			};
 			let event = !scope.GetElementProperty(elementProperty.propertyID) ? scope.onCreateElementProperty : scope.onSetElementProperty;
-			scope.elementProperties[elementProperty.propertyID] = triggerEvents ? event.TriggerPipe(elementProperty) : elementProperty;
+			scope.elementProperties[elementProperty.propertyID] = triggerEvents ? event.Trigger(elementProperty) : elementProperty;
 			return [elementProperty.propertyID];
 		},
-		onCreateElementProperty: CreateEvent('onCreateElementProperty', '(elementProperty)->elementProperty'),
-		onSetElementProperty: CreateEvent('onSetElementProperty', '(elementProperty)->elementProperty'),
+		onCreateElementProperty: CreateEvent('onCreateElementProperty', '(elementProperty)->elementProperty', 'pipe'),
+		onSetElementProperty: CreateEvent('onSetElementProperty', '(elementProperty)->elementProperty', 'pipe'),
 		GetElementProperty: propertyID => typeof (propertyID) === 'undefined' ? Object.values(scope.elementProperties) : CopyObject(scope.elementProperties[propertyID]),
 		RemoveElementProperty: function (propertyIDOrElementProperty, triggerEvents = true) {
-			if (triggerEvents) propertyIDOrElementProperty = scope.onRemoveElementProperty.TriggerPipe(propertyIDOrElementProperty);
+			if (triggerEvents) propertyIDOrElementProperty = scope.onRemoveElementProperty.Trigger(propertyIDOrElementProperty);
 			if (typeof (propertyIDOrElementProperty) === 'undefined') return [];
 			let id = typeof (propertyIDOrElementProperty) === 'object' ? propertyIDOrElementProperty.propertyID : propertyIDOrElementProperty;
 			if (!scope.elementProperties.hasOwnProperty(id)) return [];
 			delete scope.elementProperties[id];
 			return [id];
 		},
-		onRemoveElementProperty: CreateEvent('onRemoveElementProperty', '(propertyIDOrElementProperty)->propertyIDOrElementProperty'),
+		onRemoveElementProperty: CreateEvent('onRemoveElementProperty', '(propertyIDOrElementProperty)->propertyIDOrElementProperty', 'pipe'),
 		//endregion
 
 		//region Element types manipulation
@@ -342,65 +411,66 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 				typeStylesIDsArray: typeStylesIDsArray,
 			};
 			if (triggerEvents)
-				elementType = scope.onValidateElementType.TriggerPipe(elementType);
+				elementType = scope.onValidateElementType.Trigger(elementType);
 			elementType = ValidateElementType(elementType);
 			elementType.visTemplate = Object.assign({}, scope.GetElementClass(elementType.elementClassID).visTemplate, ...elementType.typeStylesIDsArray.map(styleID => scope.GetElementStyle(styleID)).filter(style => !!style).map(style => style.visTemplate));
 			elementType.propertiesValues = Object.fromEntries(elementType.typePropertiesIDsArray.map(propertyID => scope.GetElementProperty(propertyID)).filter(property => !!property).map(property => [property.propertyID, property.propertyDefaultValue]));
 			let event = !scope.GetElementType(elementType.typeID) ? scope.onCreateElementType : scope.onSetElementType;
-			elementType = triggerEvents ? event.TriggerPipe(elementType) : elementType;
+			elementType = triggerEvents ? event.Trigger(elementType) : elementType;
 			scope.elementTypes[elementType.typeID] = ValidateElementType(elementType);
 			return [elementType.typeID];
 		},
-		onValidateElementType: CreateEvent('onValidateElementType', '(rawElementType)->rawElementType'),
-		onCreateElementType: CreateEvent('onCreateElementType', '(elementType)->elementType'),
-		onSetElementType: CreateEvent('onSetElementType', '(elementType)->elementType'),
+		onValidateElementType: CreateEvent('onValidateElementType', '(rawElementType)->rawElementType', 'pipe'),
+		onCreateElementType: CreateEvent('onCreateElementType', '(elementType)->elementType', 'pipe'),
+		onSetElementType: CreateEvent('onSetElementType', '(elementType)->elementType', 'pipe'),
 		GetElementType: typeID => typeof (typeID) === 'undefined' ? Object.values(scope.elementTypes) : CopyObject(scope.elementTypes[typeID]),
 		RemoveElementType: function (typeIDOrElementType, triggerEvents = true) {
-			if (triggerEvents) typeIDOrElementType = scope.onRemoveElementType.TriggerPipe(typeIDOrElementType);
+			if (triggerEvents) typeIDOrElementType = scope.onRemoveElementType.Trigger(typeIDOrElementType);
 			if (typeof (typeIDOrElementType) === 'undefined') return [];
 			let id = typeof (typeIDOrElementType) === 'object' ? typeIDOrElementType.typeID : typeIDOrElementType;
 			if (!scope.elementTypes.hasOwnProperty(id)) return [];
 			delete scope.elementTypes[id];
 			return [id];
 		},
-		onRemoveElementType: CreateEvent('onRemoveElementType', '(typeIDOrElementType)->typeIDOrElementType'),
+		onRemoveElementType: CreateEvent('onRemoveElementType', '(typeIDOrElementType)->typeIDOrElementType', 'pipe'),
 		//endregion
 
 		//region Elements manipulation
 		elements: {},
-		SetElement: function (elementID, elementTypeID, elementPropertiesValuesDict = {}, elementClassArguments = {}, nestedGraph = {}, triggerEvents = true) {
+		SetElement: function (elementID, elementTypeID, elementPropertiesValues = {}, elementClassArguments = {}, nestedGraph = {}, cachedTypedPropertiesValues = undefined, triggerEvents = true) {
 			let element = {
 				elementID: elementID,
 				elementTypeID: elementTypeID,
-				elementPropertiesValuesDict: elementPropertiesValuesDict,
+				elementPropertiesValues: elementPropertiesValues,
 				elementClassArguments: elementClassArguments,
 				nestedGraph: nestedGraph,
+				cachedTypedPropertiesValues: cachedTypedPropertiesValues
 			}
 			if (triggerEvents)
-				element = scope.onValidateElement.TriggerPipe(element);
+				element = scope.onValidateElement.Trigger(element);
 			element = ValidateElement(element);
 			let elementType = scope.GetElementType(element.elementTypeID);
-			element.propertiesValues = Object.assign({}, elementType.propertiesValues, elementPropertiesValuesDict);
-			element.cachedTypedPropertiesValues = {[element.elementTypeID]: Object.assign({}, element.propertiesValues)};
+			element.elementPropertiesValues = Object.assign({}, elementType.propertiesValues, element.elementPropertiesValues);
+			element.cachedTypedPropertiesValues = element.cachedTypedPropertiesValues || {[element.elementTypeID]: Object.assign({}, element.propertiesValues)};
 			element.visTemplate = Object.assign({}, elementType.visTemplate, elementClassArguments, {id: element.elementID});
 			let event = !scope.GetElement(element.elementID) ? scope.onCreateElement : scope.onSetElement;
-			element = triggerEvents ? event.TriggerPipe(element) : element;
+			element = triggerEvents ? event.Trigger(element) : element;
 			scope.elements[element.elementID] = ValidateElement(element);
 			return [element.elementID];
 		},
-		onValidateElement: CreateEvent('onValidateElement', '(rawElement)->rawElement'),
-		onCreateElement: CreateEvent('onCreateElement', '(element)->element'),
-		onSetElement: CreateEvent('onSetElement', '(element)->element'),
+		onValidateElement: CreateEvent('onValidateElement', '(rawElement)->rawElement', 'pipe'),
+		onCreateElement: CreateEvent('onCreateElement', '(element)->element', 'pipe'),
+		onSetElement: CreateEvent('onSetElement', '(element)->element', 'pipe'),
 		GetElement: elementID => typeof (elementID) === 'undefined' ? Object.values(scope.elements) : CopyObject(scope.elements[elementID]),
 		RemoveElement: function (elementIDOrElement, triggerEvents = true) {
-			if (triggerEvents) elementIDOrElement = scope.onRemoveElement.TriggerPipe(elementIDOrElement);
+			if (triggerEvents) elementIDOrElement = scope.onRemoveElement.Trigger(elementIDOrElement);
 			if (typeof (elementIDOrElement) === 'undefined') return [];
 			let id = typeof (elementIDOrElement) === 'object' ? elementIDOrElement.elementID : elementIDOrElement;
 			if (!scope.elements.hasOwnProperty(id)) return [];
 			delete scope.elements[id];
 			return [id];
 		},
-		onRemoveElement: CreateEvent('onRemoveElement', '(elementIDOrElement)->elementIDOrElement'),
+		onRemoveElement: CreateEvent('onRemoveElement', '(elementIDOrElement)->elementIDOrElement', 'pipe'),
 		//endregion
 
 
@@ -434,8 +504,117 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		),
 	};
 
+	scope.container.html('<div class="graph-editor"></div>');
 
+	//Nested events
+	scope.engine.onUpdateNode = CreateNestedEvent('onUpdateNode', false, scope.engine.onCreateNode, scope.engine.onSetNode);
+	scope.engine.onUpdateEdge = CreateNestedEvent('onUpdateEdge', false, scope.engine.onCreateEdge, scope.engine.onSetEdge);
+	scope.onUpdateElementClass = CreateNestedEvent('onUpdateElementClass', false, scope.onCreateElementClass, scope.onSetElementClass);
+	scope.onUpdatePropertyClass = CreateNestedEvent('onUpdatePropertyClass', false, scope.onCreatePropertyClass, scope.onSetPropertyClass);
+	scope.onUpdateElementStyle = CreateNestedEvent('onUpdateElementStyle', false, scope.onCreateElementStyle, scope.onSetElementStyle);
+	scope.onUpdateElementProperty = CreateNestedEvent('onUpdateElementProperty', false, scope.onCreateElementProperty, scope.onSetElementProperty);
+	scope.onUpdateElementType = CreateNestedEvent('onUpdateElementType', false, scope.onCreateElementType, scope.onSetElementType);
+	scope.onUpdateElement = CreateNestedEvent('onUpdateElement', false, scope.onCreateElement, scope.onSetElement);
+
+	CreateBindings();
 	CreateDefaults();
+
+	//Properties editor
+	/**
+	 * Create and show properties editor.
+	 * @param elementClassID {'node'|'edge'}
+	 */
+	function CreateEditor(elementClassID, visElement) {
+		let element = scope.GetElement(visElement.id);
+		let elementTypes = scope.GetElementType().filter(elementType => elementType.elementClassID === elementClassID);
+		let currentType = scope.GetElementType(element.elementTypeID);
+
+		let availableTypesBuff = elementTypes.map(elementType => `<div class="item" data-value="${elementType.typeID}" data-text='
+														<div class="ui ${elementType.typeColor} empty circular label"></div> ${elementType.typeName}
+													'>
+														<div class="ui ${elementType.typeColor} empty circular label"></div> ${elementType.typeName} 
+														<span class="description">${elementType.typeDescription}</span>
+													</div>`);
+		let $editor = jQuery(`<div class="class-editor" hidden>
+				<div class="ui raised card">
+					<div class="content">
+						<div class="elementType">
+							<div class="ui inline labeled dropdown">
+								<input type="hidden" value="${elementTypes[0].typeID}">
+								<div class="text">${elementTypes[0].typeName}</div>
+								<i class="dropdown icon"></i>
+								<div class="menu">${availableTypesBuff.join('')}</div>
+							</div>
+						</div>
+						<div class="meta">${elementClassID}</div>
+						<div class="description">
+						</div>
+					</div>
+					<div class="ui bottom attached buttons">
+						<button class="delete ui grey button">Удалить</button>
+						<div class="or" data-text="?"></div>
+						<button class="save ui positive button">Сохранить</button>
+					</div>
+				</div>
+			</div>`);
+
+		function SelfDestruct(e) {
+			scope.engine.onStopEditing.Unsubscribe(destructionID);
+			$editor.transition({
+				animation: 'fade right',
+				onComplete: () => $editor.remove()
+			});
+			return e;
+		}
+
+		function SaveAndCacheProperties() {
+			element.elementPropertiesValues = Object.fromEntries($properties.find('>[data-property]').toArray().map(e => {
+				let $e = jQuery(e);
+				let propertyID = $e.data('property');
+				return [propertyID, scope.GetPropertyClass(scope.GetElementProperty(propertyID).propertyClassID).propertyParser($e)];
+			}));
+			AssertPropertyOrDefault(element.cachedTypedPropertiesValues, element.elementTypeID, {});
+			// noinspection TypeScriptValidateTypes
+			element.cachedTypedPropertiesValues[element.elementTypeID] = element.elementPropertiesValues;
+		}
+
+		function CreateProperties() {
+			let currentProperties = currentType.typePropertiesIDsArray.map(propertyID => scope.GetElementProperty(propertyID));
+			$properties.html('').append(...currentProperties.map(property => scope.GetPropertyClass(property.propertyClassID).propertyConstructor(property, element.elementPropertiesValues[property.propertyID])));
+		}
+
+
+		let $properties = $editor.find('.content>.description');
+		CreateProperties();
+		let $type = $editor.find('.content>.elementType .dropdown').dropdown({
+			onChange: function (value, text, $choice) {
+				if (value) {
+					SaveAndCacheProperties();
+					element.elementTypeID = value;
+					currentType = scope.GetElementType(element.elementTypeID);
+					AssertPropertyOrDefault(element.cachedTypedPropertiesValues, element.elementTypeID, {});
+					// noinspection TypeScriptValidateTypes
+					element.elementPropertiesValues = Object.assign({}, currentType.propertiesValues, element.cachedTypedPropertiesValues[element.elementTypeID]);
+					CreateProperties();
+				}
+			}
+		}).dropdown('set exactly', '' + element.elementTypeID);
+		scope.container.find('.graph-editor').append($editor);
+		$editor.transition('fade right');
+		let destructionID = scope.engine.onStopEditing.Subscribe(SelfDestruct)[0];
+		$editor.find('.save.button').click(function () {
+			SaveAndCacheProperties();
+			let visTemplate = elementClassID === 'node' ? {x: visElement.x, y: visElement.y} : {from: visElement.from, to: visElement.to};
+			scope.SetElement(element.elementID, element.elementTypeID, element.elementPropertiesValues, Object.assign({}, element.elementClassArguments, visTemplate), element.nestedGraph, element.cachedTypedPropertiesValues);
+			SelfDestruct();
+		});
+		$editor.find('.delete.button').click(function () {
+			scope.RemoveElement(element);
+			SelfDestruct();
+		});
+	}
+
+	scope.engine.onStartEditing.Subscribe(CreateEditor);
 
 
 	if (!scope.container.length) throw `Graph editor error: can not find container ${container}.`;
@@ -474,19 +653,24 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 						else {
 							edgeEditingState = 0;
 							Incoming(() => scope.engine.graph.disableEditMode());
-							callback(scope.engine.onSetEdge.TriggerPipe(visEdge));
+							scope.engine.onStopEditing.Trigger('edge', visEdge);
+							callback(scope.engine.onSetEdge.Trigger(visEdge));
 						}
 					},
 					addNode: function (visNode, callback) {
 						delete visNode.label;
 						Incoming(() => scope.engine.graph.disableEditMode());
-						callback(scope.engine.onCreateNode.TriggerPipe(visNode));
+						scope.engine.onStopEditing.Trigger('node', visNode);
+						callback(scope.engine.onCreateNode.Trigger(visNode));
 					},
 					addEdge: function (visEdge, callback) {
 						delete visEdge.label;
 						delete visEdge.title;
 						Incoming(() => scope.engine.graph.disableEditMode());
-						if (visEdge.from !== visEdge.to) callback(scope.engine.onCreateEdge.TriggerPipe(visEdge));
+						if (visEdge.from !== visEdge.to) {
+							scope.engine.onStopEditing.Trigger('edge', visEdge);
+							callback(scope.engine.onCreateEdge.Trigger(visEdge));
+						}
 					}
 				},
 				locale: 'ru',
@@ -509,20 +693,17 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 				//Start editing node
 				editedElement = scope.engine.GetNode(e.nodes[0]);
 				editedClass = 'node';
-				scope.engine.onStartEditingNode.TriggerAll(editedElement);
+				scope.engine.onStartEditing.Trigger(editedClass, editedElement);
 			} else if (e.edges.length === 1) {
 				//Start editing edge
 				scope.engine.graph.editEdgeMode();
 				editedElement = scope.engine.GetEdge(e.edges[0]);
 				editedClass = 'edge';
 				edgeEditingState = 1;
-				scope.engine.onStartEditingEdge.TriggerAll(editedElement);
+				scope.engine.onStartEditing.Trigger(editedClass, editedElement);
 			} else if (editedElement && editedClass) {
-				//End editing node/edge and set (update) new data.
-				if (editedClass === 'node')
-					scope.engine.SetNode(editedElement);
-				else
-					scope.engine.SetEdge(editedElement);
+				//End editing node/edge.
+				scope.engine.onStopEditing.Trigger(editedClass, editedElement);
 				editedClass = null;
 				editedElement = null;
 			}
@@ -532,6 +713,9 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 				edgeEditingState = 2;
 			else if (edgeEditingState === 2) {
 				edgeEditingState = 0;
+				scope.engine.onStopEditing.Trigger(editedClass, editedElement);
+				editedClass = null;
+				editedElement = null;
 				scope.engine.graph.disableEditMode();
 				scope.engine.graph.unselectAll();
 			}
@@ -631,11 +815,6 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		return $menu;
 	}
 
-	/*
-	 returns editor jQuery with load function (graph editing object) -> editor jQuery
-	 saveCallback = function (class, graph edited object)
-	 deleteCallback = function (class, graph editing object)
-	 */
 	function BuildEditor(elementClass, elementType, saveCallback, deleteCallback) {
 		let elClass = scope.types[elementClass];
 
@@ -820,7 +999,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		icon: 'folder open',
 		click: scope.load
 	});
-	scope.container.html(jQuery('<div class="graph-editor"></div>').append($graph, $modal, $menu, ...Object.values(editors)));
+	scope.container.find('.graph-editor').append($graph, $modal, $menu, ...Object.values(editors));
 	$modal.initialize();
 	FitZoom();
 	return scope;
@@ -910,3 +1089,8 @@ vis.DataSet.prototype._updateItem = function (item) {
 	Object.getOwnPropertyNames(item).forEach(p => d[p] = item[p]);
 	return id;
 }
+
+
+//BUG #1: spawned two copies of editor for each node.
+//TODO #2: default value is not shown when select because it is set to whole array. Add bindings or adapters.
+//BUG #3: all ids must be string.

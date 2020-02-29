@@ -45,40 +45,55 @@
 		// });
 		// let nodeStyles = GraphEditor.CreateStyles(blueNodeType, redNodeType);
 		// window.ge = GraphEditor('body', nodeStyles);
-		let data = {'Курс': 'Курс', 'Став': 'Став', 'Объем': 'Объем', 'Цена': 'Цена', 'Объем 1': 'Объем 1'}
 
-		// for (let i = 0; i < 20; i++)
-		// 	data['test' + i] = 'test' + i;
 
-		let inputNodeType = GraphEditor.CreateType_old('qwe', 'Вход', 'Эллипсы синего цвета', '#8dd0f8', {
-			color: '#8dd0f8',
-			shape: 'circle'
-		});
-		let featureNodeType = GraphEditor.CreateType_old('asd', 'Признак', 'Признаки', '#b7f9c2', {
-			color: '#b7f9c2',
-			shape: 'ellipse'
-		}, data);
-		let outputNodeType = GraphEditor.CreateType_old('zxc', 'Модель', 'Модель', '#80aef5', {
-			color: '#80aef5',
-			shape: 'circle'
-		});
+		// let data = {'Курс': 'Курс', 'Став': 'Став', 'Объем': 'Объем', 'Цена': 'Цена', 'Объем 1': 'Объем 1'}
+		//
+		// let inputNodeType = GraphEditor.CreateType_old('qwe', 'Вход', 'Эллипсы синего цвета', '#8dd0f8', {
+		// 	color: '#8dd0f8',
+		// 	shape: 'circle'
+		// });
+		// let featureNodeType = GraphEditor.CreateType_old('asd', 'Признак', 'Признаки', '#b7f9c2', {
+		// 	color: '#b7f9c2',
+		// 	shape: 'ellipse'
+		// }, data);
+		// let outputNodeType = GraphEditor.CreateType_old('zxc', 'Модель', 'Модель', '#80aef5', {
+		// 	color: '#80aef5',
+		// 	shape: 'circle'
+		// });
+		//
+		// let nodeStyles = GraphEditor.CreateStyles_old(inputNodeType, featureNodeType, outputNodeType);
+		//
+		// ge = GraphEditor('body', nodeStyles, Object.values(data));
+		//
+		// ge.addNode('input', 'qwe', 'Вход')
+		// ge.addNode('output', 'zxc', 'Модель')
+		//
+		// for (let col_code in data) {
+		// 	ge.addNode(col_code, 'asd', col_code);
+		// 	ge.addEdge('input', col_code, col_code + '_1', '0');
+		// 	ge.addEdge(col_code, 'output', col_code + '_2', '1');
+		// }
+		//
+		// ge.engine.nodes.add(ge.data[GraphEditor.ElementClasses.node.classID].get());
+		// ge.engine.edges.add(ge.data[GraphEditor.ElementClasses.edge.classID].get());
 
-		let nodeStyles = GraphEditor.CreateStyles_old(inputNodeType, featureNodeType, outputNodeType);
 
-		ge = GraphEditor('body', nodeStyles, Object.values(data));
-
-		ge.addNode('input', 'qwe', 'Вход')
-		ge.addNode('output', 'zxc', 'Модель')
-
-		for (let col_code in data) {
-			ge.addNode(col_code, 'asd', col_code);
-			ge.addEdge('input', col_code, col_code + '_1', '0');
-			ge.addEdge(col_code, 'output', col_code + '_2', '1');
-		}
-
-		ge.engine.nodes.add(ge.data[GraphEditor.ElementClasses.node.classID].get());
-		ge.engine.edges.add(ge.data[GraphEditor.ElementClasses.edge.classID].get());
-
+		//All ids must be string!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		//Create graph in container 'body'.
+		ge = GraphEditor('body');
+		//Create node display style.
+		ge.SetElementStyle('greenNode', 'node', Object.assign({}, ge.GetElementStyle('defaultNode'), {color: 'green'})); //Just copied defaultNode style and changed color.
+		//Create editable property from predefined class.
+		ge.SetElementProperty('title', 'select', 'Название (выбрать)', ['Курс', 'Став', 'Объем', 'Цена', 'Объем 1']);
+		//Create node type whith defined style and property. It has no label, so no binding would automatically happen.
+		ge.SetElementType('titledNode', 'node', 'Признак', 'Выбираемое название', 'green', ['title'], ['greenNode']);
+		//Create nodes and edges (generate random id).
+		ge.SetElement('a', 'defaultNode');
+		ge.SetElement('b', 'defaultNode', {label: 'Узел2'});
+		ge.SetElement('c', 'titledNode', {title: 'Цена'});
+		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'a', to: 'b'});
+		ge.SetElement(GraphEditor.GenerateID(), 'dashedEdge', {}, {from: 'a', to: 'c'});
 
 	});
 </script>
