@@ -5,6 +5,22 @@
  */
 function GraphEditor(container, nodeStyles, titles = ['Новый узел'], edgeStyles, nodesData, edgesData) {
 	//TODO: сделать, чтобы изменение graph.types[class] автоматически применялись (переконструировались меню редакторов).
+
+	/**
+	 * Check own property existence. In case object does not contain such property and default value defined assignes that property to object and also returns true.
+	 * @param propertyDefaultValue Can be omitted or undefined to return false in case such property does not exist.
+	 * @returns {boolean}
+	 */
+	function AssertPropertyOrDefault(object, objectPropertyName, propertyDefaultValue = undefined) {
+		if (!object.hasOwnProperty(objectPropertyName)) {
+			if (typeof (propertyDefaultValue) === 'undefined')
+				return false;
+			object[objectPropertyName] = propertyDefaultValue;
+		}
+		return true;
+	}
+
+
 	function AssertVariable(path, owner, library) {
 		owner = owner || window;
 		let variable;
@@ -50,10 +66,49 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 				let buf = args;
 				for (let callbackID in e.callbacks)
 					buf = e.callbacks[callbackID](buf);
+				// Return result not array with result in case of single argument.
+				if (args.length === 0)
+					return;
+				if (args.length === 1)
+					return buf[0];
 				return buf;
 			},
 		};
 		return e;
+	}
+
+	/**
+	 * Ensure vis node contains id (random), x (0) and y (0) properties (default values).
+	 */
+	function ValidateVisNode(visNode) {
+		AssertPropertyOrDefault(visNode, 'id', GraphEditor.GenerateID());
+		AssertPropertyOrDefault(visNode, 'x', 0);
+		AssertPropertyOrDefault(visNode, 'y', 0);
+		return visNode
+	}
+
+	/**
+	 * Ensure vis node contains id (random), from (0) and to (0) properties (default values).
+	 */
+	function ValidateVisEdge(visEdge) {
+		AssertPropertyOrDefault(visEdge, 'id', GraphEditor.GenerateID());
+		AssertPropertyOrDefault(visEdge, 'from', 0);
+		AssertPropertyOrDefault(visEdge, 'to', 0);
+		return visEdge
+	}
+
+	//TODO add validation for all object's properties/IDs existence and MAYBE throw exceptions.
+	function ValidateElementType(rawElementTypeOrElementType) {
+		let otherClasses = rawElementTypeOrElementType.typeStylesIDsArray.map(styleID => scope.GetElementStyle(styleID)).filter(style => !!style && style.elementClassID !== rawElementTypeOrElementType.elementClassID);
+		if (otherClasses.length)
+			throw `Can not create type ${rawElementTypeOrElementType.typeName} of element class ${rawElementTypeOrElementType.elementClassID} with style(s) ${otherClasses.map(style => style.styleID + ' (of class ' + style.elementClassID + ')').join(', ')}.`;
+		return rawElementTypeOrElementType;
+	}
+
+	function ValidateElement(rawElementOrElement) {
+		if (!scope.GetElementType(rawElementOrElement.elementTypeID))
+			throw `Can not create element of type ${rawElementOrElement.elementTypeID}. Ensure this type was created.`;
+		return rawElementOrElement;
 	}
 
 
@@ -72,7 +127,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 			}
 
 			// TODO Вот из-за этой строки всё ломалось: setTimeout(() => StabilizeFitZoom(), 1);
-			let element = $.extend(true, scope.types[GraphEditor.ElementClasses.node.classID][type].template, {id: id, type: type, label: label}, pos, template);
+			let element = jQuery.extend(true, scope.types[GraphEditor.ElementClasses.node.classID][type].template, {id: id, type: type, label: label}, pos, template);
 			return scope.data[GraphEditor.ElementClasses.node.classID].add(element)[0];
 		},
 		addEdge: (from, to, id, type = 0, template = {}) => {
@@ -81,27 +136,221 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		},
 		removeNode: id => scope.data[GraphEditor.ElementClasses.node.classID].remove(id),
 		removeEdge: id => scope.data[GraphEditor.ElementClasses.edge.classID].remove(id),
+
+
 		engine: {
-			nodes: new vis.DataSet(),
-			edges: new vis.DataSet(),
 			graph: {},
-			CreateNode: (visNode, triggerEvents = true) => scope.engine.nodes.add(triggerEvents ? scope.engine.onCreateNode.TriggerPipe(visNode) : visNode),
-			CreateEdge: (visEdge, triggerEvents = true) => scope.engine.edges.add(triggerEvents ? scope.engine.onCreateEdge.TriggerPipe(visEdge) : visEdge),
-			RemoveNode: (visNodeOrNodeID, triggerEvents = true) => scope.engine.nodes.remove(triggerEvents ? scope.engine.onRemoveNode.TriggerPipe(visNodeOrNodeID) : visNodeOrNodeID),
-			RemoveEdge: (visEdgeOrEdgeID, triggerEvents = true) => scope.engine.edges.remove(triggerEvents ? scope.engine.onRemoveEdge.TriggerPipe(visEdgeOrEdgeID) : visEdgeOrEdgeID),
-			GetNode: nodeID => scope.engine.nodes.get(nodeID),
-			GetEdge: edgeID => scope.engine.edges.get(edgeID),
-			SetNode: (visNode, triggerEvents = true) => scope.engine.nodes.update(triggerEvents ? scope.engine.onSetNode.TriggerPipe(visNode) : visNode),
-			SetEdge: (visEdge, triggerEvents = true) => scope.engine.edges.update(triggerEvents ? scope.engine.onSetEdge.TriggerPipe(visEdge) : visEdge),
+
+			//region Nodes manipulation
+			nodes: new vis.DataSet(),
+			SetNode: function (visNode, triggerEvents = true) {
+				visNode = ValidateVisNode(visNode);
+				if (!scope.engine.GetNode(visNode.id)) return scope.engine.nodes.add(ValidateVisNode(triggerEvents ? scope.engine.onCreateNode.TriggerPipe(visNode) : visNode));
+				return scope.engine.nodes.update(ValidateVisNode(triggerEvents ? scope.engine.onSetNode.TriggerPipe(visNode) : visNode));
+			},
 			onCreateNode: CreateEvent('onCreateNode', '(visNode)->visNode'),
-			onCreateEdge: CreateEvent('onCreateEdge', '(visEdge)->visEdge'),
-			onStartEditingNode: CreateEvent('onStartEditingNode', '(visNode)->undefined'),
-			onStartEditingEdge: CreateEvent('onStartEditingEdge', '(visEdge)->undefined'),
 			onSetNode: CreateEvent('onSetNode', '(visNode)->visNode'),
-			onSetEdge: CreateEvent('onSetEdge', '(visEdge)->visEdge'),
+			GetNode: nodeID => scope.engine.nodes.get(nodeID),
+			RemoveNode: (visNodeOrNodeID, triggerEvents = true) => scope.engine.nodes.remove(triggerEvents ? scope.engine.onRemoveNode.TriggerPipe(visNodeOrNodeID) : visNodeOrNodeID),
 			onRemoveNode: CreateEvent('onRemoveNode', '(visNodeOrNodeID)->visNodeOrNodeID'),
+			onStartEditingNode: CreateEvent('onStartEditingNode', '(visNode)->undefined'),
+			//endregion
+
+			//region Edges manipulation
+			edges: new vis.DataSet(),
+			SetEdge: function (visEdge, triggerEvents = true) {
+				visEdge = ValidateVisEdge(visEdge);
+				if (!scope.engine.GetEdge(visEdge.id)) return scope.engine.edges.add(ValidateVisEdge(triggerEvents ? scope.engine.onCreateEdge.TriggerPipe(visEdge) : visEdge));
+				return scope.engine.edges.update(ValidateVisEdge(triggerEvents ? scope.engine.onSetEdge.TriggerPipe(visEdge) : visEdge));
+			},
+			onCreateEdge: CreateEvent('onCreateEdge', '(visEdge)->visEdge'),
+			onSetEdge: CreateEvent('onSetEdge', '(visEdge)->visEdge'),
+			GetEdge: edgeID => scope.engine.edges.get(edgeID),
+			RemoveEdge: (visEdgeOrEdgeID, triggerEvents = true) => scope.engine.edges.remove(triggerEvents ? scope.engine.onRemoveEdge.TriggerPipe(visEdgeOrEdgeID) : visEdgeOrEdgeID),
 			onRemoveEdge: CreateEvent('onRemoveEdge', '(visEdgeOrEdgeID)->visEdgeOrEdgeID'),
-		}
+			onStartEditingEdge: CreateEvent('onStartEditingEdge', '(visEdge)->undefined'),
+			//endregion
+		},
+
+		//region Element classes manipulation
+		elementClasses: {},
+		SetElementClass: function (classID, visTemplate, triggerEvents = true) {
+			let elemtnClass = {
+				classID: classID,
+				visTemplate: visTemplate
+			};
+			let event = !scope.GetElementClass(elemtnClass.classID) ? scope.onCreateElementClass : scope.onSetElementClass;
+			scope.elementClasses[elemtnClass.classID] = triggerEvents ? event.TriggerPipe(elemtnClass) : elemtnClass;
+			return [elemtnClass.classID];
+		},
+		onCreateElementClass: CreateEvent('onCreateElementClass', '(elementClass)->elementClass'),
+		onSetElementClass: CreateEvent('onSetElementClass', '(elementClass)->elementClass'),
+		GetElementClass: classID => typeof (classID) === 'undefined' ? Object.values(scope.elementClasses) : scope.elementClasses[classID] || null,
+		RemoveElementClass: function (classIDOrElementClass, triggerEvents = true) {
+			if (triggerEvents) classIDOrElementClass = scope.onRemoveElementClass.TriggerPipe(classIDOrElementClass);
+			if (typeof (classIDOrElementClass) === 'undefined') return [];
+			let id = typeof (classIDOrElementClass) === 'object' ? classIDOrElementClass.classID : classIDOrElementClass;
+			if (!scope.elementClasses.hasOwnProperty(id)) return [];
+			delete scope.elementClasses[id];
+			return [id];
+		},
+		onRemoveElementClass: CreateEvent('onRemoveElementClass', '(classIDOrElementClass)->classIDOrElementClass'),
+		//endregion
+
+		//region Property classes manipulation
+		propertyClasses: {},
+		SetPropertyClass: function (propertyClassID, propertyConstructor, propertyParser, triggerEvents = true) {
+			let propertyClass = {
+				propertyClassID: propertyClassID,
+				propertyConstructor: propertyConstructor,
+				propertyParser: propertyParser,
+			};
+			let event = !scope.GetPropertyClass(propertyClass.propertyClassID) ? scope.onCreatePropertyClass : scope.onSetPropertyClass;
+			scope.propertyClasses[propertyClass.propertyClassID] = triggerEvents ? event.TriggerPipe(propertyClass) : propertyClass;
+			return [propertyClass.propertyClassID];
+		},
+		onCreatePropertyClass: CreateEvent('onCreatePropertyClass', '(propertyClass)->propertyClass'),
+		onSetPropertyClass: CreateEvent('onSetPropertyClass', '(propertyClass)->propertyClass'),
+		GetPropertyClass: propertyClassID => typeof (propertyClassID) === 'undefined' ? Object.values(scope.propertyClasses) : scope.propertyClasses[propertyClassID] || null,
+		RemovePropertyClass: function (propertyClassIDOrPropertyClass, triggerEvents = true) {
+			if (triggerEvents) propertyClassIDOrPropertyClass = scope.onRemovePropertyClass.TriggerPipe(propertyClassIDOrPropertyClass);
+			if (typeof (propertyClassIDOrPropertyClass) === 'undefined') return [];
+			let id = typeof (propertyClassIDOrPropertyClass) === 'object' ? propertyClassIDOrPropertyClass.propertyClassID : propertyClassIDOrPropertyClass;
+			if (!scope.propertyClasses.hasOwnProperty(id)) return [];
+			delete scope.propertyClasses[id];
+			return [id];
+		},
+		onRemovePropertyClass: CreateEvent('onRemovePropertyClass', '(propertyClassIDOrPropertyClass)->propertyClassIDOrPropertyClass'),
+		//endregion
+
+		//region Element styles manipulation
+		elementStyles: {},
+		SetElementStyle: function (styleID, elementClassID, visTemplate, triggerEvents = true) {
+			let elementStyle = {
+				styleID: styleID,
+				elementClassID: elementClassID,
+				visTemplate: visTemplate,
+			};
+			let event = !scope.GetElementStyle(elementStyle.styleID) ? scope.onCreateElementStyle : scope.onSetElementStyle;
+			scope.elementStyles[elementStyle.styleID] = triggerEvents ? event.TriggerPipe(elementStyle) : elementStyle;
+			return [elementStyle.styleID];
+		},
+		onCreateElementStyle: CreateEvent('onCreateElementStyle', '(elementStyle)->elementStyle'),
+		onSetElementStyle: CreateEvent('onSetElementStyle', '(elementStyle)->elementStyle'),
+		GetElementStyle: styleID => typeof (styleID) === 'undefined' ? Object.values(scope.elementStyles) : scope.elementStyles[styleID] || null,
+		RemoveElementStyle: function (styleIDOrElementStyle, triggerEvents = true) {
+			if (triggerEvents) styleIDOrElementStyle = scope.onRemoveElementStyle.TriggerPipe(styleIDOrElementStyle);
+			if (typeof (styleIDOrElementStyle) === 'undefined') return [];
+			let id = typeof (styleIDOrElementStyle) === 'object' ? styleIDOrElementStyle.styleID : styleIDOrElementStyle;
+			if (!scope.elementStyles.hasOwnProperty(id)) return [];
+			delete scope.elementStyles[id];
+			return [id];
+		},
+		onRemoveElementStyle: CreateEvent('onRemoveElementStyle', '(styleIDOrElementStyle)->styleIDOrElementStyle'),
+		//endregion
+
+		//region Element properties manipulation
+		elementProperties: {},
+		SetElementProperty: function (propertyID, propertyClassID, propertyName, propertyDefaultValue, triggerEvents = true) {
+			let elementProperty = {
+				propertyID: propertyID,
+				propertyClassID: propertyClassID,
+				propertyName: propertyName,
+				propertyDefaultValue: propertyDefaultValue,
+			};
+			let event = !scope.GetElementProperty(elementProperty.propertyID) ? scope.onCreateElementProperty : scope.onSetElementProperty;
+			scope.elementProperties[elementProperty.propertyID] = triggerEvents ? event.TriggerPipe(elementProperty) : elementProperty;
+			return [elementProperty.propertyID];
+		},
+		onCreateElementProperty: CreateEvent('onCreateElementProperty', '(elementProperty)->elementProperty'),
+		onSetElementProperty: CreateEvent('onSetElementProperty', '(elementProperty)->elementProperty'),
+		GetElementProperty: propertyID => typeof (propertyID) === 'undefined' ? Object.values(scope.elementProperties) : scope.elementProperties[propertyID] || null,
+		RemoveElementProperty: function (propertyIDOrElementProperty, triggerEvents = true) {
+			if (triggerEvents) propertyIDOrElementProperty = scope.onRemoveElementProperty.TriggerPipe(propertyIDOrElementProperty);
+			if (typeof (propertyIDOrElementProperty) === 'undefined') return [];
+			let id = typeof (propertyIDOrElementProperty) === 'object' ? propertyIDOrElementProperty.propertyID : propertyIDOrElementProperty;
+			if (!scope.elementProperties.hasOwnProperty(id)) return [];
+			delete scope.elementProperties[id];
+			return [id];
+		},
+		onRemoveElementProperty: CreateEvent('onRemoveElementProperty', '(propertyIDOrElementProperty)->propertyIDOrElementProperty'),
+		//endregion
+
+		//region Element types manipulation
+		elementTypes: {},
+		SetElementType: function (typeID, elementClassID, typeName, typeDescription, typeColor, typePropertiesIDsArray, typeStylesIDsArray, triggerEvents = true) {
+			let elementType = {
+				typeID: typeID,
+				elementClassID: elementClassID,
+				typeName: typeName,
+				typeDescription: typeDescription,
+				typeColor: typeColor,
+				typePropertiesIDsArray: typePropertiesIDsArray,
+				typeStylesIDsArray: typeStylesIDsArray,
+			};
+			if (triggerEvents)
+				elementType = scope.onValidateElementType.TriggerPipe(elementType);
+			elementType = ValidateElementType(elementType);
+			elementType.visTemplate = Object.assign({}, scope.GetElementClass(elementType.elementClassID).visTemplate, ...elementType.typeStylesIDsArray.map(styleID => scope.GetElementStyle(styleID)).filter(style => !!style).map(style => style.visTemplate));
+			elementType.propertiesValues = Object.fromEntries(elementType.typePropertiesIDsArray.map(propertyID => scope.GetElementProperty(propertyID)).filter(property => !!property).map(property => [property.propertyID, property.propertyDefaultValue]));
+			let event = !scope.GetElementType(elementType.typeID) ? scope.onCreateElementType : scope.onSetElementType;
+			elementType = triggerEvents ? event.TriggerPipe(elementType) : elementType;
+			scope.elementTypes[elementType.typeID] = ValidateElementType(elementType);
+			return [elementType.typeID];
+		},
+		onValidateElementType: CreateEvent('onValidateElementType', '(rawElementType)->rawElementType'),
+		onCreateElementType: CreateEvent('onCreateElementType', '(elementType)->elementType'),
+		onSetElementType: CreateEvent('onSetElementType', '(elementType)->elementType'),
+		GetElementType: typeID => typeof (typeID) === 'undefined' ? Object.values(scope.elementTypes) : scope.elementTypes[typeID] || null,
+		RemoveElementType: function (typeIDOrElementType, triggerEvents = true) {
+			if (triggerEvents) typeIDOrElementType = scope.onRemoveElementType.TriggerPipe(typeIDOrElementType);
+			if (typeof (typeIDOrElementType) === 'undefined') return [];
+			let id = typeof (typeIDOrElementType) === 'object' ? typeIDOrElementType.typeID : typeIDOrElementType;
+			if (!scope.elementTypes.hasOwnProperty(id)) return [];
+			delete scope.elementTypes[id];
+			return [id];
+		},
+		onRemoveElementType: CreateEvent('onRemoveElementType', '(typeIDOrElementType)->typeIDOrElementType'),
+		//endregion
+
+		//region Elements manipulation
+		elements: {},
+		SetElement: function (elementID, elementTypeID, elementPropertiesValuesDict = {}, elementClassArguments = {}, triggerEvents = true) {
+			let element = {
+				elementID: elementID,
+				elementTypeID: elementTypeID,
+				elementPropertiesValuesDict: elementPropertiesValuesDict,
+				elementClassArguments: elementClassArguments,
+			}
+			if (triggerEvents)
+				element = scope.onValidateElement.TriggerPipe(element);
+			element = ValidateElement(element);
+			let elementType = scope.GetElementType(element.elementTypeID);
+			element.propertiesValues = Object.assign({}, elementType.propertiesValues, elementPropertiesValuesDict);
+			element.nestedGraph = {};
+			element.cachedTypedPropertiesValues = {[element.elementTypeID]: Object.assign({}, element.propertiesValues)};
+			element.visTemplate = Object.assign({}, elementType.visTemplate, elementClassArguments);
+			let event = !scope.GetElement(element.elementID) ? scope.onCreateElement : scope.onSetElement;
+			element = triggerEvents ? event.TriggerPipe(element) : element;
+			scope.elements[element.elementID] = ValidateElement(element);
+			return [element.elementID];
+		},
+		onValidateElement: CreateEvent('onValidateElement', '(rawElement)->rawElement'),
+		onCreateElement: CreateEvent('onCreateElement', '(element)->element'),
+		onSetElement: CreateEvent('onSetElement', '(element)->element'),
+		GetElement: elementID => typeof (elementID) === 'undefined' ? Object.values(scope.elements) : scope.elements[elementID] || null,
+		RemoveElement: function (elementIDOrElement, triggerEvents = true) {
+			if (triggerEvents) elementIDOrElement = scope.onRemoveElement.TriggerPipe(elementIDOrElement);
+			if (typeof (elementIDOrElement) === 'undefined') return [];
+			let id = typeof (elementIDOrElement) === 'object' ? elementIDOrElement.elementID : elementIDOrElement;
+			if (!scope.elements.hasOwnProperty(id)) return [];
+			delete scope.elements[id];
+			return [id];
+		},
+		onRemoveElement: CreateEvent('onRemoveElement', '(elementIDOrElement)->elementIDOrElement'),
+		//endregion
+
+
 	};
 	scope.data = {
 		[GraphEditor.ElementClasses.node.classID]: new vis.DataSet(nodesData),
@@ -535,8 +784,13 @@ function CreateObjectFromArguments(args) {
 	return Object.fromEntries(ZipArrays(GetArgumentNames(args.callee), args));
 }
 
+function CreateObjectFromProperties(objectPropertyName, ...objects) {
+	return Object.fromEntries(objects.map(o => [o[objectPropertyName], o]));
+}
+
 
 GraphEditor.CreateElementClass = function (classID, visTemplate) { return CreateObjectFromArguments(arguments); };
+GraphEditor.CreatePropertyClass = function (propertyClassID, propertyConstructor, propertyParser) { return CreateObjectFromArguments(arguments); };
 GraphEditor.CreateElementStyle = function (styleID, elementClass, visTemplate) { return CreateObjectFromArguments(arguments); };
 GraphEditor.CreateElementProperty = function (propertyID, propertyClass, propertyName, propertyDefaultValue) { return CreateObjectFromArguments(arguments); };
 GraphEditor.CreateElementType = function (typeID, elementClass, typeName, typeDescription, typeColor, typePropertiesArray, typeStylesArray) {
@@ -549,15 +803,20 @@ GraphEditor.CreateElementType = function (typeID, elementClass, typeName, typeDe
 	return type;
 };
 GraphEditor.CreateElement = function (elementID, elementType, elementPropertiesValuesDict = {}, ...elementClassArguments) {
+	let propsVals = Object.assign({}, elementType.propertiesValues, elementPropertiesValuesDict);
 	return {
 		elementID: elementID,
-		propertiesValues: Object.assign({}, elementType.propertiesValues, elementPropertiesValuesDict),
+		propertiesValues: propsVals,
 		visTemplate: Object.assign({}, elementType.visTemplate, Object.fromEntries(ZipArrays(Object.keys(elementType.elementClass.visTemplate).slice(0, elementClassArguments.length), elementClassArguments))),
-		elementType: elementType
+		elementType: elementType,
+		nestedGraph: {},
+		cachedTypedPropertiesValues: {[elementType.typeID]: propsVals},
 	};
 }
-GraphEditor.ElementClasses = Object.freeze({node: GraphEditor.CreateElementClass('node', {x: 0, y: 0}), edge: GraphEditor.CreateElementClass('edge', {from: 0, to: 0})}); //INFO: Now only two classes of elements ara available: nodes and edges. So they are hardcoded.
-GraphEditor.PropertyClasses = Object.freeze({Text: 'Текстовое поле'});
+GraphEditor.ElementClasses = CreateObjectFromProperties('classID', GraphEditor.CreateElementClass('node', {x: 0, y: 0}), GraphEditor.CreateElementClass('edge', {from: 0, to: 0})); //INFO: Now only two classes of elements ara available: nodes and edges. So they are hardcoded.
+GraphEditor.PropertyClasses = CreateObjectFromProperties('propertyClassID',
+	GraphEditor.CreatePropertyClass('text', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}" title="${elementProperty.propertyName}" contenteditable="true">${propertyValue}</div>`, $elementProperty => $elementProperty.text())
+);
 
 GraphEditor.CreateType_old = function (id, name, description, color, template, titles) {
 	return {
@@ -581,10 +840,6 @@ GraphEditor.GenerateID = function () {
 	let id = [];
 	for (let i = 0; i < 40; i++) id.push((Math.random() * 16 | 0).toString(16));
 	return id.join('');
-}
-GraphEditor.CreateNode = function (id, properties) {
-	//TODO: Care about Vis properties overlap.
-	return Object.assign(properties || {}, {id: id || GraphEditor.GenerateID()});
 }
 
 
