@@ -95,11 +95,26 @@
 		//Create nodes and edges (generate random id).
 		ge.SetElement('a', 'defaultNode');
 		ge.SetElement('b', 'defaultNode', {label: 'Узел2'});
-		ge.SetElement('c', 'titledNode', {title: 'Цена'});
 		ge.SetElement('d', 'customTitledNode', {label: 'dynamic', customTitle: ['dynamic', 'title', 'overload']});
 		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'a', to: 'b'});
 		ge.SetElement(GraphEditor.GenerateID(), 'dashedEdge', {}, {from: 'a', to: 'c'});
-		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'b', to: 'd'});
+		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'c', to: 'd'});
+		//Update options on titledNode changed. Subscribe before setting node c to init d by initing c.
+		ge.onSetElement.Subscribe(function (element) {
+			//Handle titledNode by it's ID.
+			if (element.elementID === 'c') {
+				//Find node d.
+				let d = ge.GetElement('d');
+				//Node d has customTitle property, so it's value defines it's options.
+				d.elementPropertiesValues.customTitle = [1, 2, 3].map(i => element.elementPropertiesValues.title + " " + i);//Selected in node c option plus 1, 2 or 3 number. Number 1 will be preselected.
+				//Update node d. Sorry, no special method now, use constructor.
+				ge.SetElement(d.elementID, d.elementTypeID, d.elementPropertiesValues, d.elementClassArguments, d.nestedGraph, d.cachedTypedPropertiesValues);
+			}
+			//Type of this event is 'pipe', so must return element.
+			return element;
+		});
+		//Now create node c and it will update node d.
+		ge.SetElement('c', 'titledNode', {title: 'Цена'});
 
 	});
 </script>

@@ -250,9 +250,16 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 			AssertPropertyOrDefault(visNode, 'id', GraphEditor.GenerateID());
 			if (!scope.GetElement(visNode.id))
 				scope.SetElement(visNode.id, 'defaultNode', {}, {x: visNode.x, y: visNode.y}, {}, undefined, false);
+			// else {
+			// 	//update x and y
+			// 	let element = scope.GetElement(visNode.id);
+			// 	element.visTemplate.x = visNode.x;
+			// 	element.visTemplate.y = visNode.y;
+			// 	scope.SetElement(element.elementID, element.elementTypeID, element.elementPropertiesValues, element.elementClassArguments, element.nestedGraph, element.cachedTypedPropertiesValues);
+			// }
 			return Object.assign({}, scope.GetElement(visNode.id).visTemplate, visNode);
 		});
-
+		//TODO: bind edge/node vis properties when edited/created.
 	}
 
 	function UpdateNodesPositions() {
