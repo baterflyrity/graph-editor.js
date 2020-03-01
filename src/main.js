@@ -40,71 +40,6 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 	AssertVariable('modal', jQuery(), 'Semantic UI');
 	AssertVariable('dropdown', jQuery(), 'Semantic UI');
 
-	/**
-	 * Get only unique PRIMITIVE values from array.
-	 * @param array {any[]}
-	 * @returns {any[]}
-	 */
-	function GetArrayUniques(array) {
-		return [...new Set(array)];
-	}
-
-	/**
-	 * Создать событие.
-	 * @param eventName
-	 * @param eventType {'pipe','broadcast'} - Тип события. Pipe: композиция подписчиков, broadcast: независимые подписчики.
-	 */
-	function CreateEvent(eventName, eventDescription, eventType) {
-		let e = {
-			eventName: eventName,
-			eventDescription: eventDescription,
-			eventType: eventType,
-			callbacks: {},
-			Subscribe: function (callback, replaceExisting = false, callbackID = undefined) {
-				let id = callbackID || GraphEditor.GenerateID();
-				if (e.callbacks.hasOwnProperty(id) && !replaceExisting)
-					throw `Event ${e.eventName} already has callback with id ${id}. Try to use replaceExisting = true or another callbackID.`;
-				e.callbacks[id] = callback;
-				return [id];
-			},
-			Unsubscribe: function (callbackID) {
-				if (e.callbacks.hasOwnProperty(callbackID)) {
-					delete e.callbacks[callbackID];
-					return [callbackID];
-				}
-				return null;
-			},
-			Trigger: function (...args) {
-				if (e.eventType === 'pipe') {
-					let callbacks = Object.values(e.callbacks);
-					if (args.length === 0) {
-						callbacks.forEach(cb => cb());
-						return;
-					}
-					if (args.length === 1) {
-						let buf = args[0];
-						callbacks.forEach(cb => buf = cb(buf));
-						return buf;
-					}
-					let buf = args;
-					callbacks.forEach(cb => buf = cb(...buf));
-					return buf;
-				} else if (e.eventType === 'broadcast') return Object.fromEntries(Object.entries(e.callbacks).map(([callbackID, callback]) => [callbackID, callback(...args)]));
-				else throw `Unknown event type ${e.eventType}. Can only trigger pipe or broadcast events.`;
-			},
-		};
-		return e;
-	}
-
-	function CreateNestedEvent(eventName, eventDescription = undefined, ...parentEvents) {
-		let e = CreateEvent(eventName, eventDescription, 'nested');
-		e.parentEvents = parentEvents;
-		e.eventDescription = e.eventDescription || GetArrayUniques(e.parentEvents.map(pe => pe.eventDescription)).join('; ');
-		delete e.callbacks;
-		e.Subscribe = (...eventConstructorArgs) => e.parentEvents.map(pe => pe.Subscribe(...eventConstructorArgs));
-		e.Unsubscribe = (...eventConstructorArgs) => e.parentEvents.map(pe => pe.Unsubscribe(...eventConstructorArgs));
-		return e;
-	}
 
 	/**
 	 * Ensure vis node contains id (random), x (0) and y (0) properties (default values).
@@ -143,6 +78,20 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 	function CopyObject(object) {
 		if (typeof (object) !== 'object') return null;
 		return Object.assign({}, object);
+	}
+
+	function SelectPropertyDefaultValue(defaultValue) {
+		switch (Object.prototype.toString.call(defaultValue)) {
+			case '[object Array]':
+				return defaultValue.length ? defaultValue[0] : '';
+			case '[object Object]':
+				return JSON.stringify(defaultValue);
+			case '[object Null]':
+			case '[object Undefined]':
+			case '[object Function]':
+				return '';
+		}
+		return '' + defaultValue;
 	}
 
 
@@ -221,6 +170,8 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		scope.onUpdateElement.Subscribe(function (element) {
 			if (element.elementPropertiesValues.hasOwnProperty('label'))
 				element.visTemplate.label = element.elementPropertiesValues.label;
+			else if (element.elementClassArguments.hasOwnProperty('label'))
+				element.elementClassArguments.label = element.elementPropertiesValues.label;
 			let elementType = scope.GetElementType(element.elementTypeID);
 			if (!!elementType) {
 				if (elementType.elementClassID === 'node') scope.engine.SetNode(element.visTemplate);
@@ -465,6 +416,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 			elementType = ValidateElementType(elementType);
 			elementType.visTemplate = Object.assign({}, scope.GetElementClass(elementType.elementClassID).visTemplate, ...elementType.typeStylesIDsArray.map(styleID => scope.GetElementStyle(styleID)).filter(style => !!style).map(style => style.visTemplate));
 			elementType.propertiesValues = Object.fromEntries(elementType.typePropertiesIDsArray.map(propertyID => scope.GetElementProperty(propertyID)).filter(property => !!property).map(property => [property.propertyID, property.propertyDefaultValue]));
+			// elementType.propertiesValues = Object.fromEntries(elementType.typePropertiesIDsArray.map(propertyID => scope.GetElementProperty(propertyID)).filter(property => !!property).map(property => [property.propertyID, SelectPropertyDefaultValue(property.propertyDefaultValue)])); //TODO: make sure no specifiec default value selector required.
 			let event = !scope.GetElementType(elementType.typeID) ? scope.onCreateElementType : scope.onSetElementType;
 			elementType = triggerEvents ? event.Trigger(elementType) : elementType;
 			scope.elementTypes[elementType.typeID] = ValidateElementType(elementType);
@@ -668,18 +620,6 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 
 
 	if (!scope.container.length) throw `Graph editor error: can not find container ${container}.`;
-
-
-	/**
-	 * Call func right after (not guaranteed) current frame.
-	 *
-	 * Use arrow functions instead of bare reference.
-	 *
-	 * @return {number}
-	 */
-	function Incoming(func) {
-		return setTimeout(func, 0);
-	}
 
 
 	/**
@@ -1074,6 +1014,84 @@ function CreateObjectFromProperties(objectPropertyName, ...objects) {
 	return Object.fromEntries(objects.map(o => [o[objectPropertyName], o]));
 }
 
+/**
+ * Call func right after (not guaranteed) current frame.
+ *
+ * Use arrow functions instead of bare reference.
+ *
+ * @return {number}
+ */
+function Incoming(func) {
+	return setTimeout(func, 0);
+}
+
+
+/**
+ * Get only unique PRIMITIVE values from array.
+ * @param array {any[]}
+ * @returns {any[]}
+ */
+function GetArrayUniques(array) {
+	return [...new Set(array)];
+}
+
+/**
+ * Создать событие.
+ * @param eventName
+ * @param eventType {'pipe','broadcast'} - Тип события. Pipe: композиция подписчиков, broadcast: независимые подписчики.
+ */
+function CreateEvent(eventName, eventDescription, eventType) {
+	let e = {
+		eventName: eventName,
+		eventDescription: eventDescription,
+		eventType: eventType,
+		callbacks: {},
+		Subscribe: function (callback, replaceExisting = false, callbackID = undefined) {
+			let id = callbackID || GraphEditor.GenerateID();
+			if (e.callbacks.hasOwnProperty(id) && !replaceExisting)
+				throw `Event ${e.eventName} already has callback with id ${id}. Try to use replaceExisting = true or another callbackID.`;
+			e.callbacks[id] = callback;
+			return [id];
+		},
+		Unsubscribe: function (callbackID) {
+			if (e.callbacks.hasOwnProperty(callbackID)) {
+				delete e.callbacks[callbackID];
+				return [callbackID];
+			}
+			return null;
+		},
+		Trigger: function (...args) {
+			if (e.eventType === 'pipe') {
+				let callbacks = Object.values(e.callbacks);
+				if (args.length === 0) {
+					callbacks.forEach(cb => cb());
+					return;
+				}
+				if (args.length === 1) {
+					let buf = args[0];
+					callbacks.forEach(cb => buf = cb(buf));
+					return buf;
+				}
+				let buf = args;
+				callbacks.forEach(cb => buf = cb(...buf));
+				return buf;
+			} else if (e.eventType === 'broadcast') return Object.fromEntries(Object.entries(e.callbacks).map(([callbackID, callback]) => [callbackID, callback(...args)]));
+			else throw `Unknown event type ${e.eventType}. Can only trigger pipe or broadcast events.`;
+		},
+	};
+	return e;
+}
+
+function CreateNestedEvent(eventName, eventDescription = undefined, ...parentEvents) {
+	let e = CreateEvent(eventName, eventDescription, 'nested');
+	e.parentEvents = parentEvents;
+	e.eventDescription = e.eventDescription || GetArrayUniques(e.parentEvents.map(pe => pe.eventDescription)).join('; ');
+	delete e.callbacks;
+	e.Subscribe = (...eventConstructorArgs) => e.parentEvents.map(pe => pe.Subscribe(...eventConstructorArgs));
+	e.Unsubscribe = (...eventConstructorArgs) => e.parentEvents.map(pe => pe.Unsubscribe(...eventConstructorArgs));
+	return e;
+}
+
 
 GraphEditor.CreateElementClass = function (classID, visTemplate) { return CreateObjectFromArguments(arguments); };
 GraphEditor.CreatePropertyClass = function (propertyClassID, propertyConstructor, propertyParser) { return CreateObjectFromArguments(arguments); };
@@ -1144,3 +1162,83 @@ vis.DataSet.prototype._updateItem = function (item) {
 //BUG #1: spawned two copies of editor for each node.
 //TODO #2: default value is not shown when select because it is set to whole array. Add bindings or adapters.
 //BUG #3: all ids must be string.
+
+
+//-----------------------------------------------------------------------------------
+// Data Graph
+function DataGraph(graphEditor) {
+
+	function DummyHandler() {}
+
+	/**
+	 * @param connectionType {'from'|'to'}
+	 * @returns {['edge elements IDs']}
+	 */
+	function GetIOEdges(processorID, connectionType) {
+		return scope.graphEditor.GetElement().filter(element => scope.graphEditor.GetElementType(element.elementTypeID).elementClassID === 'edge' && element.visTemplate[connectionType] === processorID);
+	}
+
+
+	let callbacks = {};
+	let scope = {
+		graphEditor: graphEditor,
+		dummyHandler: DummyHandler,
+
+
+		//region Processor type manipulations
+		SetProcessorType: function (processorTypeID, processorTypeName, processorTypeDescription, processorTypeColor = 'hidden', processorPropertyClassesIDsDict = {}, processorStylesIDsArray = ['defaultNode'], processorUpdateHandler = scope.dummyHandler, processorInputHandler = scope.dummyHandler, processorOutputHandler = scope.dummyHandler, triggerEvents = true) {
+			let processorType = {
+				processorTypeID: processorTypeID,
+				processorTypeName: processorTypeName,
+				processorTypeDescription: processorTypeDescription,
+				processorTypeColor: processorTypeColor,
+				processorPropertyClassesIDsDict: processorPropertyClassesIDsDict, //{Accuracy:[text,'1'],Type:['customSelect',['Upper','Lower']]}
+				processorStylesIDsArray: processorStylesIDsArray,
+				processorUpdateHandler: processorUpdateHandler,
+				processorInputHandler: processorInputHandler,
+				processorOutputHandler: processorOutputHandler,
+			}
+			if (triggerEvents) {
+				if (!scope.graphEditor.GetElementType(processorTypeID))
+					processorType = scope.onCreateProcessorType.Trigger(processorType);
+				else
+					processorType = scope.onSetProcessorType.Trigger(processorType);
+			}
+			callbacks[processorType.processorTypeID] = {
+				processorUpdateHandler: processorType.processorUpdateHandler,
+				processorInputHandler: processorType.processorInputHandler,
+				processorOutputHandler: processorType.processorOutputHandler,
+			};
+			let props = Object.entries(processorType.processorPropertyClassesIDsDict).map(([paramName, paramData]) => {
+				let propID = scope.graphEditor.GenerateID();
+				scope.graphEditor.SetElementProperty(propID, paramData[0], paramName, paramData[1]);
+				return propID;
+			});
+			return scope.graphEditor.SetElementType(processorType.processorTypeID, 'node', processorType.processorTypeName, processorType.processorTypeDescription, processorType.processorTypeColor, props, processorType.processorStylesIDsArray);
+		},
+		onCreateProcessorType: CreateEvent('onCreateProcessorType', '(processorType)->processorType', 'pipe'),
+		onSetProcessorType: CreateEvent('onSetProcessorType', '(processorType)->processorType', 'pipe'),
+		//endregion
+	};
+
+
+	let onChangeElement = CreateNestedEvent('onChangeElement', false, scope.graphEditor.onUpdateElement, scope.graphEditor.onRemoveElement);
+	onChangeElement.Subscribe(function (element) {
+		if (callbacks.hasOwnProperty(element.elementTypeID)) Incoming(() => callbacks[element.elementTypeID].processorUpdateHandler(element, GetIOEdges(element.elementID, 'to'), GetIOEdges(element.elementID, 'from')));
+		else if (scope.graphEditor.GetElementType(element.elementTypeID).elementClassID === 'edge') {
+			let toElement = scope.graphEditor.GetElement(element.visTemplate.to);
+			if (callbacks.hasOwnProperty(toElement.elementTypeID)) Incoming(() => callbacks[toElement.elementTypeID].processorInputHandler(toElement, GetIOEdges(element.visTemplate.to, 'to'), GetIOEdges(element.visTemplate.to, 'from')));
+			let fromElement = scope.graphEditor.GetElement(element.visTemplate.from);
+			if (callbacks.hasOwnProperty(fromElement.elementTypeID)) Incoming(() => callbacks[fromElement.elementTypeID].processorOutputHandler(fromElement, GetIOEdges(element.visTemplate.from, 'to'), GetIOEdges(element.visTemplate.from, 'from')));
+		}
+		return element;
+	});
+	scope.graphEditor.onRemoveElementType.Subscribe(function (elementType) {
+		if (callbacks.hasOwnProperty(elementType.typeID))
+			delete callbacks[elementType.typeID];
+		return elementType;
+	});
+
+
+	return scope;
+}

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Graph editor example</title>
+	<!--jQuery-->
+	<script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+	
+	<!--Semantic-UI-->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css" integrity="sha256-9mbkOfVho3ZPXfM7W8sV2SndrGDuh7wuyLjtsWeTI1Q=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/button.min.css" integrity="sha256-xtpiJw1+6DW1Oac4CVyU7PbCxHxufOBIspA9T79Y384=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/dropdown.min.css" integrity="sha256-eKk/OB1/M9wf6oWV2+jUV8DpHXBFjNthcjTRvgPb4jg=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/header.min.css" integrity="sha256-xJCnUW9lBafMfAoQesJSWvpSvudGlOysL8HU3fO/CPI=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/icon.min.css" integrity="sha256-KyXPF3/VOPPst/NQOzCWr97QMfSfzJLyFT0o5lYJXiQ=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/input.min.css" integrity="sha256-hlqxoW9mkPO7jQpdyUy6gqIUIXpFz1iq7NUvYxRoeds=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/item.min.css" integrity="sha256-cruqIcC0V+wSzrSIxWuc5YZylQUm/L18bt6l55+gK5U=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/label.min.css" integrity="sha256-qB3YAR8Frc4C6MnNNmPiJuK0NERKVzSLyvUtOzvHvTc=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/menu.min.css" integrity="sha256-cRSLOaiPiyfTQ4B4HT1OCF/2CWNzGcPO9Nns6Jrf4hg=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/message.min.css" integrity="sha256-DhgaaWn1rmuk1WfOB+BLM7RYn8hQjlnOp0j9LvnJLUs=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/transition.min.css" integrity="sha256-gt0FRuZd5L22CqAruA5Hbx9DXzbJS6xXzK3pEmh+1VE=" crossorigin="anonymous"/>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js" integrity="sha256-t8GepnyPmw9t+foMh3mKNvcorqNHamSKtKRxxpUEgFI=" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/dropdown.min.js" integrity="sha256-uEocYy6a0MpPLLHtYV7QAGdOeMRwE0Am2WtnOg/hBfM=" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/modal.min.js" integrity="sha256-8POmd6680Gev+MdgKbVOHP+9lm+9WB1AVyuLf2WRcxc=" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/transition.min.js" integrity="sha256-k30cmb6hiQ/LGKpX2AcllUduUJ0kA4DKKStgUxkGQzM=" crossorigin="anonymous"></script>
+	
+	<!--Vis.js Network-->
+	<script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+	<!--	<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">-->
+	<!--	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>-->
+	
+	<!--Graph Editor-->
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<script type="text/javascript" src="main.js"></script>
+</head>
+<body>
+</body>
+<script>
+	$(function () {
+		//All ids must be string!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		//Create graph in container 'body'.
+		ge = GraphEditor('body');
+		//Create data graph
+		dg = DataGraph(ge);
+		//Create raw data pipe.
+		ge.SetElementStyle('rawDataPipe', 'edge', Object.assign({}, ge.GetElementStyle('defaultEdge'), {color: 'green', label: '*'})); //Change color of default edge, add label.
+		ge.SetElementType('rawDataPipe', 'edge', 'Pipe', 'Соединить выход со входом', 'green', [], ['rawDataPipe']);
+		//Create selectable data pipe.
+		ge.SetElementStyle('selectableDataPipe', 'edge', Object.assign({}, ge.GetElementStyle('defaultEdge'), {color: 'red', label: '%'})); //Change color of default edge, add label.
+		ge.SetElementProperty('customColumn', 'customSelect', 'Колонка', ['все']);
+		ge.SetElementType('selectableDataPipe', 'edge', 'Selectable Pipe', 'Выбрать колонку', 'blue', ['customColumn'], ['selectableDataPipe']);
+		//Create data processors types.
+		dg.SetProcessorType('datasource', 'Источник данных', '[a, b, c, d]', 'hidden', {}, ['defaultNode'], dg.dummyHandler, dg.dummyHandler, function (processor, inputs, outputs) {
+			//Processor's outputs changed (processor - element of this type).
+			//Set outputs types to rawDataPipe.
+			outputs.filter(element => element.elementTypeID !== 'rawDataPipe').forEach(element => {
+				element.elementClassArguments.label = '[a, b, c, d]'; //set label to columns [a, b, c, d]
+				ge.SetElement(element.elementID, 'rawDataPipe', {}, element.elementClassArguments, element.nestedGraph, element.cachedTypedPropertiesValues);
+			});
+		});
+		dg.SetProcessorType('transformer', 'Преобразователь', 'Обрабатывает данные', 'hidden', {}, ['defaultNode'], dg.dummyHandler, dg.dummyHandler, function (processor, inputs, outputs) {
+			//Processor's outputs changed (processor - element of this type).
+			//Set outputs types to selectableDataPipe.
+			outputs.filter(element => element.elementTypeID !== 'selectableDataPipe').forEach(element => {
+				//receive columns from first input
+				// let options = inputs.length ? JSON.parse(inputs[0].elementClassArguments.label) : ['unknown']; //TODO: monkey parsing - bad
+				let options = ['a', 'b', 'c', 'd'];
+				ge.SetElement(element.elementID, 'selectableDataPipe', {'customColumn': options}, element.elementClassArguments, element.nestedGraph, element.cachedTypedPropertiesValues);
+			});
+			//Update label to selected column.
+			outputs.filter(element => element.elementTypeID === 'selectableDataPipe').forEach(element => {
+				if (element.elementClassArguments.label === element.elementPropertiesValues.customColumn[0]) return; //avoid loop
+				element.elementClassArguments.label = element.elementPropertiesValues.customColumn[0];
+				ge.SetElement(element.elementID, 'selectableDataPipe', element.elementPropertiesValues, element.elementClassArguments, element.nestedGraph, element.cachedTypedPropertiesValues);
+			});
+		});
+		//Create nodes and connect them: datasource->transformer->transformer
+		ge.SetElement('a', 'datasource');
+		ge.SetElement('b', 'transformer');
+		ge.SetElement('c', 'defaultNode');
+		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'a', to: 'b'});
+		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'b', to: 'c'});
+
+	});
+</script>
+</html>
