@@ -151,19 +151,48 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		scope.SetElementClass('node', {x: 0, y: 0});
 		scope.SetElementClass('edge', {from: 0, to: 0});
 		//Property classes
-		scope.SetPropertyClass('text', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}" title="${elementProperty.propertyName}" data-placeholder="${elementProperty.propertyName}" contenteditable="true">${propertyValue}</div>`, $propertyDOM => $propertyDOM.text());
+		scope.SetPropertyClass('text', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}">
+	<label>${elementProperty.propertyName}: </label>
+	<div style="display:inline-block;" contenteditable="true" data-placeholder="${elementProperty.propertyDefaultValue}">${propertyValue}</div>
+</div>`, $propertyDOM => $propertyDOM.find('[contenteditable]').text());
 		scope.SetPropertyClass('select', (elementProperty, propertyValue) => {
 			let val = typeof (propertyValue) === 'string' && propertyValue.length ? propertyValue : elementProperty.propertyDefaultValue[0];
 			let availableOptions = elementProperty.propertyDefaultValue.map(option => `<div class="item" data-value="${option}" data-text='${option}'>
 														<span class="description">${option}</span>
 													</div>`);
-			return jQuery(`<div data-property="${elementProperty.propertyID}" class="ui inline dropdown">
-								<input type="hidden" value="${elementProperty.propertyDefaultValue[0]}">
-								<div title="${elementProperty.propertyName}" data-placeholder="${elementProperty.propertyName}" class="text">${elementProperty.propertyDefaultValue[0]}</div>
-								<i class="dropdown icon"></i>
-								<div class="menu">${availableOptions.join('')}</div>
-							</div>`).dropdown().dropdown('set exactly', '' + val);
-		}, $propertyDOM => $propertyDOM.dropdown('get value'));
+			let $dom = jQuery(`<div data-property="${elementProperty.propertyID}">
+	<label>${elementProperty.propertyName}: </label>
+	<div class="ui inline dropdown">
+		<input type="hidden" value="${val}">
+		<div class="text">${val}</div>
+		<i class="dropdown icon"></i>
+		<div class="menu">${availableOptions.join('')}</div>
+	</div>
+</div>`);
+			$dom.find('.dropdown').dropdown().dropdown('set exactly', '' + val);
+			return $dom;
+		}, $propertyDOM => $propertyDOM.find('.ui.inline.dropdown').dropdown('get value'));
+		scope.SetPropertyClass('customSelect', (elementProperty, propertyValue) => {
+			let val = propertyValue[0];
+			let availableOptions = propertyValue.map(option => `<div class="item" data-value="${option}" data-text='${option}'>
+														<span class="description">${option}</span>
+													</div>`);
+			let $dom = jQuery(`<div data-property="${elementProperty.propertyID}">
+	<label>${elementProperty.propertyName}: </label>
+	<div class="ui inline dropdown">
+		<input type="hidden" value="${val}">
+		<div class="text">${val}</div>
+		<i class="dropdown icon"></i>
+		<div class="menu">${availableOptions.join('')}</div>
+	</div>
+</div>`);
+			$dom.find('.dropdown').dropdown().dropdown('set exactly', '' + val);
+			return $dom;
+		}, $propertyDOM => {
+			let options = $propertyDOM.find('.item').toArray().map(item => $(item).data('value'));
+			let val = $propertyDOM.find('.ui.inline.dropdown').dropdown('get value');
+			return [val].concat(options.filter(opt => opt !== val));
+		});
 		//Element styles
 		scope.SetElementStyle('defaultNode', 'node', {
 			color: "#80aef5",
