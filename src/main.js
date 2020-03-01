@@ -3,8 +3,10 @@
  nodeStyles - массив стилей узлов (https://visjs.github.io/vis-network/docs/network/nodes.html)
  edgeStyles - массив стилей рёбер (https://visjs.github.io/vis-network/docs/network/edges.html)
  */
-function GraphEditor(container, nodeStyles, titles = ['Новый узел'], edgeStyles, nodesData, edgesData) {
-	//TODO: сделать, чтобы изменение graph.types[class] автоматически применялись (переконструировались меню редакторов).
+function GraphEditor(container, hierarchical = true) {
+	//TODO: убрать старые куски кода.
+
+	let nodeStyles, titles = ['Новый узел'], edgeStyles, nodesData, edgesData;
 
 	/**
 	 * Check own property existence. In case object does not contain such property and default value defined assignes that property to object and also returns true.
@@ -671,11 +673,11 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 					}
 				},
 				layout: {
-					hierarchical: {
+					hierarchical: hierarchical ? {
 						direction: "LR",
 						sortMethod: "directed",
 						shakeTowards: "leaves"
-					}
+					} : false
 				}
 			});
 		scope.engine.graph.addEventListener('select', function (e) {
