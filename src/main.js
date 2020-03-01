@@ -153,6 +153,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 		//Property classes
 		scope.SetPropertyClass('text', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}" title="${elementProperty.propertyName}" data-placeholder="${elementProperty.propertyName}" contenteditable="true">${propertyValue}</div>`, $propertyDOM => $propertyDOM.text());
 		scope.SetPropertyClass('select', (elementProperty, propertyValue) => {
+			let val = typeof (propertyValue) === 'string' && propertyValue.length ? propertyValue : elementProperty.propertyDefaultValue[0];
 			let availableOptions = elementProperty.propertyDefaultValue.map(option => `<div class="item" data-value="${option}" data-text='${option}'>
 														<span class="description">${option}</span>
 													</div>`);
@@ -161,7 +162,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 								<div title="${elementProperty.propertyName}" data-placeholder="${elementProperty.propertyName}" class="text">${elementProperty.propertyDefaultValue[0]}</div>
 								<i class="dropdown icon"></i>
 								<div class="menu">${availableOptions.join('')}</div>
-							</div>`).dropdown().dropdown('set exactly', '' + propertyValue);
+							</div>`).dropdown().dropdown('set exactly', '' + val);
 		}, $propertyDOM => $propertyDOM.dropdown('get value'));
 		//Element styles
 		scope.SetElementStyle('defaultNode', 'node', {
@@ -210,6 +211,19 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 			}
 			return element;
 		});
+		scope.engine.onCreateEdge.Subscribe(function (visEdge) {
+			AssertPropertyOrDefault(visEdge, 'id', GraphEditor.GenerateID());
+			if (!scope.GetElement(visEdge.id))
+				scope.SetElement(visEdge.id, 'defaultEdge', {}, {from: visEdge.from, to: visEdge.to}, {}, undefined, false);
+			return Object.assign({}, scope.GetElement(visEdge.id).visTemplate, visEdge);
+		});
+		scope.engine.onCreateNode.Subscribe(function (visNode) {
+			AssertPropertyOrDefault(visNode, 'id', GraphEditor.GenerateID());
+			if (!scope.GetElement(visNode.id))
+				scope.SetElement(visNode.id, 'defaultNode', {}, {x: visNode.x, y: visNode.y}, {}, undefined, false);
+			return Object.assign({}, scope.GetElement(visNode.id).visTemplate, visNode);
+		});
+
 	}
 
 	function UpdateNodesPositions() {
@@ -689,6 +703,7 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 				}
 			});
 		scope.engine.graph.addEventListener('select', function (e) {
+			if (editedClass && editedElement) scope.engine.onStopEditing.Trigger(editedClass, editedElement);
 			if (e.nodes.length) {
 				//Start editing node
 				editedElement = scope.engine.GetNode(e.nodes[0]);
@@ -703,7 +718,6 @@ function GraphEditor(container, nodeStyles, titles = ['Новый узел'], ed
 				scope.engine.onStartEditing.Trigger(editedClass, editedElement);
 			} else if (editedElement && editedClass) {
 				//End editing node/edge.
-				scope.engine.onStopEditing.Trigger(editedClass, editedElement);
 				editedClass = null;
 				editedElement = null;
 			}
