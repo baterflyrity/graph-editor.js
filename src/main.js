@@ -260,6 +260,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				savedGraph.elementTypes.forEach(x => scope.SetElementType(x.typeID, x.elementClassID, x.typeName, x.typeDescription, x.typeColor, x.typePropertiesIDsArray, x.typeStylesIDsArray));
 			if (savedGraph.hasOwnProperty('elements'))
 				savedGraph.elements.forEach(x => scope.SetElement(x.elementID, x.elementTypeID, x.elementPropertiesValues, x.elementClassArguments, x.nestedGraph, x.cahedTypedPropertiesValues));
+			FitZoom();
 		},
 		clear: () => {
 			scope.GetElement().forEach(x => scope.RemoveElement(x));
