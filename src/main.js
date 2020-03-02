@@ -152,6 +152,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			let val = $propertyDOM.find('.ui.inline.dropdown').dropdown('get value');
 			return [val].concat(options.filter(opt => opt !== val));
 		});
+		scope.SetPropertyClass('hidden', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}" hidden>${propertyValue}</div>`, $propertyDOM => $propertyDOM.text());
+		scope.SetPropertyClass('hiddenLabel', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}" hidden>${propertyValue}</div>`, $propertyDOM => $propertyDOM.text());
 		//Element styles
 		scope.SetElementStyle('defaultNode', 'node', {
 			color: "#80aef5",
@@ -180,6 +182,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		scope.onUpdateElement.Subscribe(function (element) {
 			if (element.elementPropertiesValues.hasOwnProperty('label'))
 				element.visTemplate.label = element.elementPropertiesValues.label;
+			else if (element.elementPropertiesValues.hasOwnProperty('hiddenLabel'))
+				element.visTemplate.label = element.elementPropertiesValues.hiddenLabel;
 			else if (element.elementClassArguments.hasOwnProperty('label'))
 				element.elementClassArguments.label = element.elementPropertiesValues.label;
 			let elementType = scope.GetElementType(element.elementTypeID);
@@ -1218,11 +1222,20 @@ function DataGraph(graphEditor) {
 		return scope.graphEditor.GetElement().filter(element => scope.graphEditor.GetElementType(element.elementTypeID).elementClassID === 'edge' && element.visTemplate[connectionType] === processorID);
 	}
 
+	//TODO: add processorID validation.
+
 
 	let callbacks = {};
 	let scope = {
 		graphEditor: graphEditor,
 		dummyHandler: DummyHandler,
+		GetInputs: processorID => GetIOEdges(processorID, 'to'),
+		GetOutputs: processorID => GetIOEdges(processorID, 'from'),
+		GetProcessorData: processorID => ({
+			parameters: Object.fromEntries(Object.entries(scope.graphEditor.GetElement(processorID).elementPropertiesValues).map(([paramID, paramValue]) => [scope.graphEditor.GetElementProperty(paramID).propertyName, paramValue])),
+			inputs: processorID => scope.GetInputs(processorID).map(edgeElement => edgeElement.elementPropertiesValues.hiddenLabel),
+			outputs: processorID => scope.GetOutputs(processorID).map(edgeElement => edgeElement.elementPropertiesValues.hiddenLabel),
+		}),
 
 
 		//region Processor type manipulations
