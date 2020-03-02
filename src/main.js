@@ -77,11 +77,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		return rawElementOrElement;
 	}
 
-	function CopyObject(object) {
-		if (typeof (object) !== 'object') return null;
-		return Object.assign({}, object);
-	}
-
 	function SelectPropertyDefaultValue(defaultValue) {
 		switch (Object.prototype.toString.call(defaultValue)) {
 			case '[object Array]':
@@ -172,6 +167,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		});
 		//Element properties
 		scope.SetElementProperty('label', 'text', 'Название', 'Узел');
+		scope.SetElementProperty('hiddenLabel', 'hiddenLabel', 'Нередактируемое название', 'Узел');
 		//Element types
 		scope.SetElementType('defaultNode', 'node', 'Узел', 'Стандартный вид', 'blue', ['label'], ['defaultNode']);
 		scope.SetElementType('defaultEdge', 'edge', 'Сплошное ребро', 'Обычное ребро', 'hidden', [], ['defaultEdge']);
@@ -185,7 +181,12 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			else if (element.elementPropertiesValues.hasOwnProperty('hiddenLabel'))
 				element.visTemplate.label = element.elementPropertiesValues.hiddenLabel;
 			else if (element.elementClassArguments.hasOwnProperty('label'))
-				element.elementClassArguments.label = element.elementPropertiesValues.label;
+				element.visTemplate.label = element.elementPropertiesValues.label;
+			else {
+				let props = Object.keys(element.elementPropertiesValues).filter(propertyID => scope.GetElementProperty(propertyID).propertyClassID.toLowerCase().indexOf('label') !== -1);
+				if (props.length)
+					element.visTemplate.label = element.elementPropertiesValues[props[0]];
+			}
 			let elementType = scope.GetElementType(element.elementTypeID);
 			if (!!elementType) {
 				if (elementType.elementClassID === 'node') scope.engine.SetNode(element.visTemplate);
@@ -748,7 +749,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 						direction: "RL",
 						sortMethod: "hubsize",
 						// shakeTowards:'leaves',
-						levelSeparation: 100,
+						levelSeparation: 200,
 						nodeSpacing: 50,
 					} : false
 				}
@@ -1039,6 +1040,11 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 	return scope;
 }
 
+function CopyObject(object) {
+	if (typeof (object) !== 'object') return null;
+	return Object.assign({}, object);
+}
+
 function GetArgumentNames(func) {
 	return func.toString()
 		.replace(/((\/\/.*$)|(\/\*[\s\S]*?\*\/)|(\s))/mg, '')
@@ -1209,10 +1215,17 @@ vis.DataSet.prototype._updateItem = function (item) {
 
 
 //-----------------------------------------------------------------------------------
-// Data Graph
+/**
+ * Data Graph
+ * @param graphEditor {GraphEditor}
+ * @constructor
+ */
 function DataGraph(graphEditor) {
 
-	function DummyHandler() {}
+	graphEditor.SetElementProperty('pipeData', 'hiddenLabel', 'transmitted data', '*');
+	graphEditor.SetElementType('dataPipe', 'edge', 'Data pipe', 'Передаваемые данные', 'blue', ['pipeData'], ['defaultEdge']);
+
+	function DummyHandler(processorData) {return processorData;}
 
 	/**
 	 * @param connectionType {'from'|'to'}
@@ -1220,6 +1233,28 @@ function DataGraph(graphEditor) {
 	 */
 	function GetIOEdges(processorID, connectionType) {
 		return scope.graphEditor.GetElement().filter(element => scope.graphEditor.GetElementType(element.elementTypeID).elementClassID === 'edge' && element.visTemplate[connectionType] === processorID);
+	}
+
+	function GetProcessorData(processorID, inputElements = undefined, outputElements = undefined) {
+		return {
+			parameters: Object.fromEntries(Object.entries(scope.graphEditor.GetElement(processorID).elementPropertiesValues).map(([paramID, paramValue]) => [scope.graphEditor.GetElementProperty(paramID).propertyName, paramValue])),
+			inputs: (inputElements || scope.GetInputs(processorID)).map(edgeElement => edgeElement.elementPropertiesValues.hiddenLabel),
+			outputs: (outputElements || scope.GetOutputs(processorID)).map(edgeElement => edgeElement.elementPropertiesValues.hiddenLabel),
+		};
+	}
+
+	function CompareObjects(obj1, obj2) {
+		return JSON.stringify(obj1) === JSON.stringify(obj2);
+	}
+
+	function Callback(processorElement, handlerType) {
+		let inputs = scope.GetInputs(processorElement.elementID);
+		let outputs = scope.GetInputs(processorElement.elementID);
+		let args = GetProcessorData(processorElement.elementID, inputs, outputs);
+		let data = callbacks[processorElement.elementTypeID][handlerType](CopyObject(args), processorElement, inputs, outputs);
+		if (!CompareObjects(data.parameters, args.parameters)) scope.graphEditor.SetElement(processorElement.elementID, processorElement.elementType, data.parameters, processorElement.elementClassArguments, processorElement.nestedGraph, processorElement.cachedTypedPropertiesValues);
+		if (!CompareObjects(data.inputs, args.inputs)) inputs.forEach((element, i) => ge.SetElement(element.elementID, 'dataPipe', {hiddenLabel: data.inputs[i]}, element.elementClassArguments, element.nestedGraph, element.cachedTypedPropertiesValues));
+		if (!CompareObjects(data.outputs, args.outputs)) outputs.forEach((element, i) => ge.SetElement(element.elementID, 'dataPipe', {hiddenLabel: data.outputs[i]}, element.elementClassArguments, element.nestedGraph, element.cachedTypedPropertiesValues));
 	}
 
 	//TODO: add processorID validation.
@@ -1231,15 +1266,11 @@ function DataGraph(graphEditor) {
 		dummyHandler: DummyHandler,
 		GetInputs: processorID => GetIOEdges(processorID, 'to'),
 		GetOutputs: processorID => GetIOEdges(processorID, 'from'),
-		GetProcessorData: processorID => ({
-			parameters: Object.fromEntries(Object.entries(scope.graphEditor.GetElement(processorID).elementPropertiesValues).map(([paramID, paramValue]) => [scope.graphEditor.GetElementProperty(paramID).propertyName, paramValue])),
-			inputs: processorID => scope.GetInputs(processorID).map(edgeElement => edgeElement.elementPropertiesValues.hiddenLabel),
-			outputs: processorID => scope.GetOutputs(processorID).map(edgeElement => edgeElement.elementPropertiesValues.hiddenLabel),
-		}),
+		GetProcessorData: processorID => GetProcessorData(processorID),
 
 
 		//region Processor type manipulations
-		SetProcessorType: function (processorTypeID, processorTypeName, processorTypeDescription, processorTypeColor = 'hidden', processorPropertyClassesIDsDict = {}, processorStylesIDsArray = ['defaultNode'], processorUpdateHandler = scope.dummyHandler, processorInputHandler = scope.dummyHandler, processorOutputHandler = scope.dummyHandler, triggerEvents = true) {
+		SetProcessorType: function (processorTypeID, processorTypeName, processorTypeDescription, processorTypeColor = 'hidden', processorPropertyClassesIDsDict = {}, processorStylesIDsArray = ['defaultNode'], processorConfigHandler = scope.dummyHandler, processorInputHandler = scope.dummyHandler, processorOutputHandler = scope.dummyHandler, triggerEvents = true) {
 			let processorType = {
 				processorTypeID: processorTypeID,
 				processorTypeName: processorTypeName,
@@ -1247,7 +1278,7 @@ function DataGraph(graphEditor) {
 				processorTypeColor: processorTypeColor,
 				processorPropertyClassesIDsDict: processorPropertyClassesIDsDict, //{Accuracy:[text,'1'],Type:['customSelect',['Upper','Lower']]}
 				processorStylesIDsArray: processorStylesIDsArray,
-				processorUpdateHandler: processorUpdateHandler,
+				processorConfigHandler: processorConfigHandler,
 				processorInputHandler: processorInputHandler,
 				processorOutputHandler: processorOutputHandler,
 			}
@@ -1258,12 +1289,12 @@ function DataGraph(graphEditor) {
 					processorType = scope.onSetProcessorType.Trigger(processorType);
 			}
 			callbacks[processorType.processorTypeID] = {
-				processorUpdateHandler: processorType.processorUpdateHandler,
+				processorConfigHandler: processorType.processorConfigHandler,
 				processorInputHandler: processorType.processorInputHandler,
 				processorOutputHandler: processorType.processorOutputHandler,
 			};
 			let props = Object.entries(processorType.processorPropertyClassesIDsDict).map(([paramName, paramData]) => {
-				let propID = scope.graphEditor.GenerateID();
+				let propID = GraphEditor.GenerateID();
 				scope.graphEditor.SetElementProperty(propID, paramData[0], paramName, paramData[1]);
 				return propID;
 			});
@@ -1277,12 +1308,12 @@ function DataGraph(graphEditor) {
 
 	let onChangeElement = CreateNestedEvent('onChangeElement', false, scope.graphEditor.onUpdateElement, scope.graphEditor.onRemoveElement);
 	onChangeElement.Subscribe(function (element) {
-		if (callbacks.hasOwnProperty(element.elementTypeID)) Incoming(() => callbacks[element.elementTypeID].processorUpdateHandler(element, GetIOEdges(element.elementID, 'to'), GetIOEdges(element.elementID, 'from')));
+		if (callbacks.hasOwnProperty(element.elementTypeID)) Incoming(() => Callback(element, 'processorConfigHandler'));
 		else if (scope.graphEditor.GetElementType(element.elementTypeID).elementClassID === 'edge') {
 			let toElement = scope.graphEditor.GetElement(element.visTemplate.to);
-			if (callbacks.hasOwnProperty(toElement.elementTypeID)) Incoming(() => callbacks[toElement.elementTypeID].processorInputHandler(toElement, GetIOEdges(element.visTemplate.to, 'to'), GetIOEdges(element.visTemplate.to, 'from')));
+			if (toElement && callbacks.hasOwnProperty(toElement.elementTypeID)) Incoming(() => Callback(toElement, 'processorInputHandler'));
 			let fromElement = scope.graphEditor.GetElement(element.visTemplate.from);
-			if (callbacks.hasOwnProperty(fromElement.elementTypeID)) Incoming(() => callbacks[fromElement.elementTypeID].processorOutputHandler(fromElement, GetIOEdges(element.visTemplate.from, 'to'), GetIOEdges(element.visTemplate.from, 'from')));
+			if (fromElement && callbacks.hasOwnProperty(fromElement.elementTypeID)) Incoming(() => Callback(fromElement, 'processorOutputHandler'));
 		}
 		return element;
 	});

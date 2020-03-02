@@ -38,45 +38,41 @@
 	$(function () {
 		//All ids must be string!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		//Create graph in container 'body'.
-		ge = GraphEditor('body', false, true);
+		ge = GraphEditor('body', true, true);
 		//Create data graph
 		dg = DataGraph(ge);
-		//Create raw data pipe.
-		ge.SetElementStyle('rawDataPipe', 'edge', Object.assign({}, ge.GetElementStyle('defaultEdge'), {color: 'green', label: '*'})); //Change color of default edge, add label.
-		ge.SetElementType('rawDataPipe', 'edge', 'Pipe', 'Соединить выход со входом', 'green', [], ['rawDataPipe']);
-		//Create selectable data pipe.
-		ge.SetElementStyle('selectableDataPipe', 'edge', Object.assign({}, ge.GetElementStyle('defaultEdge'), {color: 'red', label: '%'})); //Change color of default edge, add label.
-		ge.SetElementProperty('customColumn', 'customSelect', 'Колонка', ['все']);
-		ge.SetElementType('selectableDataPipe', 'edge', 'Selectable Pipe', 'Выбрать колонку', 'blue', ['customColumn'], ['selectableDataPipe']);
 		//Create data processors types.
-		dg.SetProcessorType('datasource', 'Источник данных', '[a, b, c, d]', 'hidden', {}, ['defaultNode'], dg.dummyHandler, dg.dummyHandler, function (processor, inputs, outputs) {
+		dg.SetProcessorType('datasource', 'Источник данных', '[a, b, c, d]', 'hidden', {'label': ['hiddenLabel', 'datasource']}, ['defaultNode'], dg.dummyHandler, dg.dummyHandler, function (processorData, processorElement, inputs, outputs) {
 			//Processor's outputs changed (processor - element of this type).
-			//Set outputs types to rawDataPipe.
-			outputs.filter(element => element.elementTypeID !== 'rawDataPipe').forEach(element => {
-				element.elementClassArguments.label = '[a, b, c, d]'; //set label to columns [a, b, c, d]
-				ge.SetElement(element.elementID, 'rawDataPipe', {}, element.elementClassArguments, element.nestedGraph, element.cachedTypedPropertiesValues);
-			});
+			//Set output data on all edges to ABCD.
+			/*
+			 processorData = {
+			 parameters: {paramName: paramValue},
+			 inputs: [values],
+			 outputs: [values]
+			 }
+			 */
+			processorData.outputs = processorData.outputs.map(_ => 'ABCD'); //Just set all edges to ABCD.
+			//Must origin or changed return processor data.
+			return processorData;
 		});
-		dg.SetProcessorType('transformer', 'Преобразователь', 'Обрабатывает данные', 'hidden', {}, ['defaultNode'], dg.dummyHandler, dg.dummyHandler, function (processor, inputs, outputs) {
+		dg.SetProcessorType('columnSelector', 'Колонка', 'Выбирает колонку из датафрейма', 'hidden', {'Колонка': ['customSelect', ['*']], 'label': ['hiddenLabel', 'column selector']}, ['defaultNode'], function (processorData, processorElement, inputs, outputs) {
+			//Processor's parameters changed (processor - element of this type).
+			//Set options as sliced value of first input data.
+			processorData.parameters['Колонка'] = processorData.inputs.length && processorData.inputs[0] ? processorData.inputs[0].split('') : ['*']; //values can be undefined
+			//Must origin or changed return processor data.
+			return processorData;
+		}, dg.dummyHandler, function (processorData, processorElement, inputs, outputs) {
 			//Processor's outputs changed (processor - element of this type).
-			//Set outputs types to selectableDataPipe.
-			outputs.filter(element => element.elementTypeID !== 'selectableDataPipe').forEach(element => {
-				//receive columns from first input
-				// let options = inputs.length ? JSON.parse(inputs[0].elementClassArguments.label) : ['unknown']; //TODO: monkey parsing - bad
-				let options = ['a', 'b', 'c', 'd'];
-				ge.SetElement(element.elementID, 'selectableDataPipe', {'customColumn': options}, element.elementClassArguments, element.nestedGraph, element.cachedTypedPropertiesValues);
-			});
-			//Update label to selected column.
-			outputs.filter(element => element.elementTypeID === 'selectableDataPipe').forEach(element => {
-				if (element.elementClassArguments.label === element.elementPropertiesValues.customColumn[0]) return; //avoid loop
-				element.elementClassArguments.label = element.elementPropertiesValues.customColumn[0];
-				ge.SetElement(element.elementID, 'selectableDataPipe', element.elementPropertiesValues, element.elementClassArguments, element.nestedGraph, element.cachedTypedPropertiesValues);
-			});
+			//Set outputs to selected option.
+			processorData.outputs = processorData.outputs.map(_ => processorData.parameters['Колонка'][0]); //Just set all edges to ABCD.
+			//Must origin or changed return processor data.
+			return processorData;
 		});
-		//Create nodes and connect them: datasource->transformer->transformer
+		//Create nodes and connect them: datasource->columnSelector->columnSelector
 		ge.SetElement('a', 'datasource');
-		ge.SetElement('b', 'transformer');
-		ge.SetElement('c', 'defaultNode');
+		ge.SetElement('b', 'columnSelector');
+		ge.SetElement('c', 'columnSelector');
 		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'a', to: 'b'});
 		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'b', to: 'c'});
 
