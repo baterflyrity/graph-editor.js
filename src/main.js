@@ -96,6 +96,14 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		return '' + defaultValue;
 	}
 
+	function SerializeFunction(foo) {
+		return foo.toString();
+	}
+
+	function DeserializeFunction(foo) {
+		return new Function('return ' + foo)();
+	}
+
 
 	function CreateDefaults() {
 		//Element classes
@@ -228,7 +236,65 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 
 	let scope = {
 		container: jQuery(container).first(),
-		save: () => Download(scope.serialize(), 'graph.json', 'application/json'),
+
+		//region Serialization
+		save: () => ({
+			elementClasses: scope.GetElementClass(),
+			propertyClasses: scope.GetPropertyClass(),
+			elementStyles: scope.GetElementStyle(),
+			elementProperties: scope.GetElementProperty(),
+			elementTypes: scope.GetElementType(),
+			elements: scope.GetElement(),
+		}),
+		load: savedGraph => {
+			scope.clear();
+			if (savedGraph.hasOwnProperty('elementClasses'))
+				savedGraph.elementClasses.forEach(x => scope.SetElementClass(x.classID, x.visTemplate));
+			if (savedGraph.hasOwnProperty('propertyClasses'))
+				savedGraph.propertyClasses.forEach(x => scope.SetPropertyClass(x.propertyClassID, x.propertyConstructor, x.propertyParser));
+			if (savedGraph.hasOwnProperty('elementStyles'))
+				savedGraph.elementStyles.forEach(x => scope.SetElementStyle(x.styleID, x.elementClassID, x.visTemplate));
+			if (savedGraph.hasOwnProperty('elementProperties'))
+				savedGraph.elementProperties.forEach(x => scope.SetElementProperty(x.propertyID, x.propertyClassID, x.propertyName, x.propertyDefaultValue));
+			if (savedGraph.hasOwnProperty('elementTypes'))
+				savedGraph.elementTypes.forEach(x => scope.SetElementType(x.typeID, x.elementClassID, x.typeName, x.typeDescription, x.typeColor, x.typePropertiesIDsArray, x.typeStylesIDsArray));
+			if (savedGraph.hasOwnProperty('elements'))
+				savedGraph.elements.forEach(x => scope.SetElement(x.elementID, x.elementTypeID, x.elementPropertiesValues, x.elementClassArguments, x.nestedGraph, x.cahedTypedPropertiesValues));
+		},
+		clear: () => {
+			scope.GetElement().forEach(x => scope.RemoveElement(x));
+			scope.GetElementType().forEach(x => scope.RemoveElementType(x));
+			scope.GetElementProperty().forEach(x => scope.RemoveElementProperty(x));
+			scope.GetElementStyle().forEach(x => scope.RemoveElementStyle(x));
+			scope.GetPropertyClass().forEach(x => scope.RemovePropertyClass(x));
+			scope.GetElementClass().forEach(x => scope.RemoveElementClass(x));
+		},
+		serialize: (savedGraph = undefined) => {
+			let data = (typeof (savedGraph) === 'undefined' ? scope.save() : savedGraph);
+			data.propertyClasses = data.propertyClasses.map(x => ({
+				propertyClassID: x.propertyClassID,
+				propertyConstructor: SerializeFunction(x.propertyConstructor),
+				propertyParser: SerializeFunction(x.propertyParser),
+			}));
+			return JSON.stringify(data);
+		},
+		deserialize: serializedGraph => {
+			let data = JSON.parse(serializedGraph);
+			data.propertyClasses = data.propertyClasses.map(x => ({
+				propertyClassID: x.propertyClassID,
+				propertyConstructor: DeserializeFunction(x.propertyConstructor),
+				propertyParser: DeserializeFunction(x.propertyParser),
+			}));
+			return scope.load(data);
+		},
+		download: (serializedGraph = undefined) => {
+			let data = typeof (serializedGraph) === 'undefined' ? scope.serialize() : serializedGraph;
+			return Download(data, 'graph.json', 'application/json');
+		},
+		//upload - set in modal builder.
+		//endregion
+
+
 		addNode: (id, type = 0, label, template = {}) => {
 			scope.engine.graph.storePositions();
 			let pos = {x: 0, y: 0};
@@ -678,7 +744,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 						sortMethod: "hubsize",
 						// shakeTowards:'leaves',
 						levelSeparation: 100,
-						nodeSpacing: 100,
+						nodeSpacing: 50,
 					} : false
 				}
 			});
@@ -719,8 +785,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		return $graph;
 	}
 
-	// loadCallback приинмает загруженные данные. При ошибке должна выбросить исключение.
-	function BuildModal(loadCallback) {
+	function BuildModal() {
 		let $modal = jQuery(`<div class="ui mini modal">
 				<div class="header">Загрузить граф из файла</div>
 				<div class="content">
@@ -760,32 +825,31 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			currentFile = this.files && this.files[0] ? this.files[0] : false;
 			$label.text(currentFile && currentFile.name || 'Выбрать файл');
 		});
-		$modal.initialize = function () {
-			return $modal.modal({
-				transition: 'horizontal flip',
-				blurring: true,
-				onApprove: function () {
-					if (!currentFile) ToggleError(false);
-					else {
-						ToggleError(true);
-						let reader = new FileReader();
-						reader.onerror = reader.onabort = () => ToggleError(false);
-						reader.onload = function (e) {
-							try {
-								loadCallback(e.target.result);
-								$approve.removeClass('loading');
-								$modal.modal('hide');
-							} catch (e) {
-								ToggleError(false);
-							}
-						};
-						reader.readAsText(currentFile);
-					}
-					return false;
-				},
-			});
-		};
 		$modal.show = () => $modal.modal('show');
+		scope.container.find('.graph-editor').append($modal);
+		$modal.modal({
+			transition: 'horizontal flip',
+			blurring: true,
+			onApprove: function () {
+				if (!currentFile) ToggleError(false);
+				else {
+					ToggleError(true);
+					let reader = new FileReader();
+					reader.onerror = reader.onabort = () => ToggleError(false);
+					reader.onload = function (e) {
+						try {
+							scope.deserialize(e.target.result);
+							$approve.removeClass('loading');
+							$modal.modal('hide');
+						} catch (e) {
+							ToggleError(false);
+						}
+					};
+					reader.readAsText(currentFile);
+				}
+				return false;
+			},
+		});
 		return $modal;
 	}
 
@@ -937,67 +1001,35 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		//TODO: remove this <a>
 	}
 
-	function HideEditors(exclude) {
-		Object.getOwnPropertyNames(editors).filter(classValue => classValue !== exclude).forEach(classValue => editors[classValue].hide());
-	}
-
-
-	// noinspection JSCheckFunctionSignatures
-	// TODO Теперь editors для каждой комбинации класс:тип
-	let classTypeArray = Object.values(GraphEditor.ElementClasses).map(c => Object.keys(scope.types[c.classID]).map(t => [c.classID, t]));
-	let editors = Object.fromEntries([].concat(...classTypeArray).map(classType => [
-		classType[0] + ':' + classType[1],  // TODO Ужасная конструкция, надо подумать как это сделать по человечески
-		BuildEditor(classType[0], classType[1], function (elementClass, element) {
-			scope.engine.graph.disableEditMode();
-			Update(elementClass, element, true);
-		}, function (elementClass, element) {
-			scope.engine.graph.disableEditMode();
-			scope.data[elementClass].remove(element.id);
-		})]));
-
-	let $graph = BuildGraph(function (elementClass, element) {
-		HideEditors(elementClass);
-		editors[elementClass + ':' + element.type].load(element);  // TODO Ужасная конструкция, надо подумать как это сделать по человечески
-	}, function (elementClass, element) {
-		HideEditors();
-		return Update(elementClass, element, false);
-	});
-	let $modal = editable ? BuildModal(scope.deserialize).initialize() : null;
-	scope.load = () => $modal.show();
+	let $graph = BuildGraph();
+	scope.upload = () => BuildModal().show();
 	let $menu = editable ? BuildMenu({
 		name: 'addNode',
 		label: 'Новый узел',
 		icon: 'plus square',
-		click: function () {
-			HideEditors();
-			scope.engine.graph.addNodeMode();
-		}
+		click: _ => scope.engine.graph.addNodeMode()
 	}, {
 		name: 'addEdge',
 		label: 'Новое ребро',
 		icon: 'long arrow alternate right',
-		click: function () {
-			HideEditors();
-			scope.engine.graph.addEdgeMode();
-		}
+		click: _ => scope.engine.graph.addEdgeMode()
 	}, {
 		name: 'fitZoom',
 		label: 'Выровнять',
 		icon: 'expand',
-		click: FitZoom
+		click: _ => FitZoom()
 	}, {
 		name: 'save',
 		label: 'Сохранить',
 		icon: 'save',
-		click: scope.save
+		click: _ => scope.download()
 	}, {
 		name: 'load',
 		label: 'Загрузить',
 		icon: 'folder open',
-		click: scope.load
+		click: _ => scope.upload()
 	}) : null;
-	scope.container.find('.graph-editor').append($graph, $modal, $menu, ...Object.values(editors));
-	// $modal.initialize();
+	scope.container.find('.graph-editor').append($graph, $menu);
 	FitZoom();
 	return scope;
 }
