@@ -3,7 +3,7 @@
  nodeStyles - массив стилей узлов (https://visjs.github.io/vis-network/docs/network/nodes.html)
  edgeStyles - массив стилей рёбер (https://visjs.github.io/vis-network/docs/network/edges.html)
  */
-function GraphEditor(container, hierarchical = true) {
+function GraphEditor(container, hierarchical = true, editable = true) {
 	//TODO: убрать старые куски кода.
 
 	let nodeStyles, titles = ['Новый узел'], edgeStyles, nodesData, edgesData;
@@ -640,7 +640,7 @@ function GraphEditor(container, hierarchical = true) {
 			{
 				manipulation: {
 					enabled: false,
-					editEdge: function (visEdge, callback) {
+					editEdge: editable ? function (visEdge, callback) {
 						if (visEdge.from === visEdge.to) callback(null);
 						else {
 							edgeEditingState = 0;
@@ -648,14 +648,14 @@ function GraphEditor(container, hierarchical = true) {
 							scope.engine.onStopEditing.Trigger('edge', visEdge);
 							callback(scope.engine.onSetEdge.Trigger(visEdge));
 						}
-					},
-					addNode: function (visNode, callback) {
+					} : false,
+					addNode: editable ? function (visNode, callback) {
 						delete visNode.label;
 						Incoming(() => scope.engine.graph.disableEditMode());
 						scope.engine.onStopEditing.Trigger('node', visNode);
 						callback(scope.engine.onCreateNode.Trigger(visNode));
-					},
-					addEdge: function (visEdge, callback) {
+					} : false,
+					addEdge: editable ? function (visEdge, callback) {
 						delete visEdge.label;
 						delete visEdge.title;
 						Incoming(() => scope.engine.graph.disableEditMode());
@@ -663,7 +663,7 @@ function GraphEditor(container, hierarchical = true) {
 							scope.engine.onStopEditing.Trigger('edge', visEdge);
 							callback(scope.engine.onCreateEdge.Trigger(visEdge));
 						}
-					}
+					} : false,
 				},
 				locale: 'ru',
 				physics: {
@@ -674,44 +674,48 @@ function GraphEditor(container, hierarchical = true) {
 				},
 				layout: {
 					hierarchical: hierarchical ? {
-						direction: "LR",
-						sortMethod: "directed",
-						shakeTowards: "leaves"
+						direction: "RL",
+						sortMethod: "hubsize",
+						// shakeTowards:'leaves',
+						levelSeparation: 100,
+						nodeSpacing: 100,
 					} : false
 				}
 			});
-		scope.engine.graph.addEventListener('select', function (e) {
-			if (editedClass && editedElement) scope.engine.onStopEditing.Trigger(editedClass, editedElement);
-			if (e.nodes.length) {
-				//Start editing node
-				editedElement = scope.engine.GetNode(e.nodes[0]);
-				editedClass = 'node';
-				scope.engine.onStartEditing.Trigger(editedClass, editedElement);
-			} else if (e.edges.length === 1) {
-				//Start editing edge
-				scope.engine.graph.editEdgeMode();
-				editedElement = scope.engine.GetEdge(e.edges[0]);
-				editedClass = 'edge';
-				edgeEditingState = 1;
-				scope.engine.onStartEditing.Trigger(editedClass, editedElement);
-			} else if (editedElement && editedClass) {
-				//End editing node/edge.
-				editedClass = null;
-				editedElement = null;
-			}
-		});
-		$graph.find('canvas').click(function () {
-			if (edgeEditingState === 1)
-				edgeEditingState = 2;
-			else if (edgeEditingState === 2) {
-				edgeEditingState = 0;
-				scope.engine.onStopEditing.Trigger(editedClass, editedElement);
-				editedClass = null;
-				editedElement = null;
-				scope.engine.graph.disableEditMode();
-				scope.engine.graph.unselectAll();
-			}
-		});
+		if (editable) {
+			scope.engine.graph.addEventListener('select', function (e) {
+				if (editedClass && editedElement) scope.engine.onStopEditing.Trigger(editedClass, editedElement);
+				if (e.nodes.length) {
+					//Start editing node
+					editedElement = scope.engine.GetNode(e.nodes[0]);
+					editedClass = 'node';
+					scope.engine.onStartEditing.Trigger(editedClass, editedElement);
+				} else if (e.edges.length === 1) {
+					//Start editing edge
+					scope.engine.graph.editEdgeMode();
+					editedElement = scope.engine.GetEdge(e.edges[0]);
+					editedClass = 'edge';
+					edgeEditingState = 1;
+					scope.engine.onStartEditing.Trigger(editedClass, editedElement);
+				} else if (editedElement && editedClass) {
+					//End editing node/edge.
+					editedClass = null;
+					editedElement = null;
+				}
+			});
+			$graph.find('canvas').click(function () {
+				if (edgeEditingState === 1)
+					edgeEditingState = 2;
+				else if (edgeEditingState === 2) {
+					edgeEditingState = 0;
+					scope.engine.onStopEditing.Trigger(editedClass, editedElement);
+					editedClass = null;
+					editedElement = null;
+					scope.engine.graph.disableEditMode();
+					scope.engine.graph.unselectAll();
+				}
+			});
+		}
 		return $graph;
 	}
 
@@ -757,7 +761,7 @@ function GraphEditor(container, hierarchical = true) {
 			$label.text(currentFile && currentFile.name || 'Выбрать файл');
 		});
 		$modal.initialize = function () {
-			$modal.modal({
+			return $modal.modal({
 				transition: 'horizontal flip',
 				blurring: true,
 				onApprove: function () {
@@ -908,6 +912,7 @@ function GraphEditor(container, hierarchical = true) {
 	}
 
 	function FitZoom() {
+		return scope.engine.graph.fit({animation: true});
 		scope.engine.graph.storePositions();
 		let nodes = scope.engine.nodes.get();
 		let x, y;
@@ -957,9 +962,9 @@ function GraphEditor(container, hierarchical = true) {
 		HideEditors();
 		return Update(elementClass, element, false);
 	});
-	let $modal = BuildModal(scope.deserialize);
+	let $modal = editable ? BuildModal(scope.deserialize).initialize() : null;
 	scope.load = () => $modal.show();
-	let $menu = BuildMenu({
+	let $menu = editable ? BuildMenu({
 		name: 'addNode',
 		label: 'Новый узел',
 		icon: 'plus square',
@@ -990,9 +995,9 @@ function GraphEditor(container, hierarchical = true) {
 		label: 'Загрузить',
 		icon: 'folder open',
 		click: scope.load
-	});
+	}) : null;
 	scope.container.find('.graph-editor').append($graph, $modal, $menu, ...Object.values(editors));
-	$modal.initialize();
+	// $modal.initialize();
 	FitZoom();
 	return scope;
 }

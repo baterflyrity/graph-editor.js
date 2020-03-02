@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Graph editor example</title>
+	<!--jQuery-->
+	<script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+	
+	<!--Semantic-UI-->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css" integrity="sha256-9mbkOfVho3ZPXfM7W8sV2SndrGDuh7wuyLjtsWeTI1Q=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/button.min.css" integrity="sha256-xtpiJw1+6DW1Oac4CVyU7PbCxHxufOBIspA9T79Y384=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/dropdown.min.css" integrity="sha256-eKk/OB1/M9wf6oWV2+jUV8DpHXBFjNthcjTRvgPb4jg=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/header.min.css" integrity="sha256-xJCnUW9lBafMfAoQesJSWvpSvudGlOysL8HU3fO/CPI=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/icon.min.css" integrity="sha256-KyXPF3/VOPPst/NQOzCWr97QMfSfzJLyFT0o5lYJXiQ=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/input.min.css" integrity="sha256-hlqxoW9mkPO7jQpdyUy6gqIUIXpFz1iq7NUvYxRoeds=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/item.min.css" integrity="sha256-cruqIcC0V+wSzrSIxWuc5YZylQUm/L18bt6l55+gK5U=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/label.min.css" integrity="sha256-qB3YAR8Frc4C6MnNNmPiJuK0NERKVzSLyvUtOzvHvTc=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/menu.min.css" integrity="sha256-cRSLOaiPiyfTQ4B4HT1OCF/2CWNzGcPO9Nns6Jrf4hg=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/message.min.css" integrity="sha256-DhgaaWn1rmuk1WfOB+BLM7RYn8hQjlnOp0j9LvnJLUs=" crossorigin="anonymous"/>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/transition.min.css" integrity="sha256-gt0FRuZd5L22CqAruA5Hbx9DXzbJS6xXzK3pEmh+1VE=" crossorigin="anonymous"/>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js" integrity="sha256-t8GepnyPmw9t+foMh3mKNvcorqNHamSKtKRxxpUEgFI=" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/dropdown.min.js" integrity="sha256-uEocYy6a0MpPLLHtYV7QAGdOeMRwE0Am2WtnOg/hBfM=" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/modal.min.js" integrity="sha256-8POmd6680Gev+MdgKbVOHP+9lm+9WB1AVyuLf2WRcxc=" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/transition.min.js" integrity="sha256-k30cmb6hiQ/LGKpX2AcllUduUJ0kA4DKKStgUxkGQzM=" crossorigin="anonymous"></script>
+	
+	<!--Vis.js Network-->
+	<script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+	<!--	<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">-->
+	<!--	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>-->
+	
+	<!--Graph Editor-->
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<script type="text/javascript" src="main.js"></script>
+</head>
+<body>
+</body>
+<script>
+	$(function () {
+
+		//Test layout
+		let data = {
+			"nodes": [
+				{
+					"id": 1,
+					"group": "0",
+					"label": "Уголь",
+					"meta": "asd",
+					"x": 0,
+					"y": 0,
+					"selfCost": 10
+				},
+				{
+					"id": 2,
+					"group": "0",
+					"label": "Железо",
+					"x": 0,
+					"y": 0,
+					"selfCost": 15
+				},
+				{
+					"id": 3,
+					"group": "0",
+					"label": "Сталь",
+					"x": 0,
+					"y": 0,
+					"selfCost": 5
+				},
+				{
+					"id": 4,
+					"group": "0",
+					"label": "Труд",
+					"x": 0,
+					"y": 0,
+					"selfCost": 300
+				},
+				{
+					"id": 5,
+					"group": "0",
+					"label": "Паровые машины",
+					"x": 0,
+					"y": 0,
+					"selfCost": 10
+				},
+				{
+					"id": 6,
+					"group": "1",
+					"label": "Модель",
+					"x": 0,
+					"y": 0
+				},
+				{
+					"id": 7,
+					"group": "0",
+					"label": "Уголь",
+					"meta": "asd",
+					"x": 0,
+					"y": 0,
+					"selfCost": 10
+				},
+				{
+					"id": 8,
+					"group": "0",
+					"label": "Сталь",
+					"x": 0,
+					"y": 0,
+					"selfCost": 20
+				},
+				{
+					"id": 9,
+					"group": "0",
+					"label": "Паровые машины",
+					"x": 0,
+					"y": 0,
+					"selfCost": 60
+				},
+				{
+					"id": 10,
+					"group": "1",
+					"label": "Целевые показатели",
+					"x": 0,
+					"y": 0
+				},
+				{
+					"id": 11,
+					"group": "0",
+					"label": "Уголь",
+					"meta": "asd",
+					"x": 0,
+					"y": 0,
+					"selfCost": 10
+				},
+				{
+					"id": 12,
+					"group": "0",
+					"label": "Сталь",
+					"x": 0,
+					"y": 0,
+					"selfCost": 20
+				},
+				{
+					"id": 13,
+					"group": "0",
+					"label": "Паровые машины",
+					"x": 0,
+					"y": 0,
+					"selfCost": 60
+				}
+			],
+			"edges": [
+				{
+					"from": 1,
+					"to": 2,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "1",
+					"cost": 20
+				},
+				{
+					"from": 1,
+					"to": 3,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "2",
+					"cost": 50
+				},
+				{
+					"from": 1,
+					"to": 5,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "3",
+					"cost": 70
+				},
+				{
+					"from": 2,
+					"to": 3,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "4",
+					"cost": 50
+				},
+				{
+					"from": 3,
+					"to": 1,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "5",
+					"cost": 5
+				},
+				{
+					"from": 3,
+					"to": 2,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "6",
+					"cost": 5
+				},
+				{
+					"from": 3,
+					"to": 4,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "7",
+					"cost": 20
+				},
+				{
+					"from": 3,
+					"to": 5,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "8",
+					"cost": 80
+				},
+				{
+					"from": 4,
+					"to": 1,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "9",
+					"cost": 70
+				},
+				{
+					"from": 4,
+					"to": 2,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "10",
+					"cost": 65
+				},
+				{
+					"from": 4,
+					"to": 3,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "11",
+					"cost": 50
+				},
+				{
+					"from": 4,
+					"to": 5,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "12",
+					"cost": 30
+				},
+				{
+					"from": 5,
+					"to": 1,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "13",
+					"cost": 30
+				},
+				{
+					"from": 5,
+					"to": 2,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "14",
+					"cost": 35
+				},
+				{
+					"from": 5,
+					"to": 3,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "15",
+					"cost": 50
+				},
+				{
+					"from": 5,
+					"to": 4,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "16",
+					"cost": 80
+				},
+				{
+					"from": 1,
+					"to": 6,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "17"
+				},
+				{
+					"from": 2,
+					"to": 6,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "18"
+				},
+				{
+					"from": 3,
+					"to": 6,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "19"
+				},
+				{
+					"from": 4,
+					"to": 6,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "20"
+				},
+				{
+					"from": 5,
+					"to": 6,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "21"
+				},
+				{
+					"from": 6,
+					"to": 7,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "22"
+				},
+				{
+					"from": 6,
+					"to": 8,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "23"
+				},
+				{
+					"from": 6,
+					"to": 9,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "24"
+				},
+				{
+					"from": 7,
+					"to": 10,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "25"
+				},
+				{
+					"from": 8,
+					"to": 10,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "26"
+				},
+				{
+					"from": 9,
+					"to": 10,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "27"
+				},
+				{
+					"from": 10,
+					"to": 11,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "28"
+				},
+				{
+					"from": 10,
+					"to": 12,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "29"
+				},
+				{
+					"from": 10,
+					"to": 13,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "30"
+				}
+			]
+		};
+
+		function CalculateLevel(node, srcs = []) {
+			if (srcs.indexOf(node.id) !== -1) return -1;
+			let edges = data.edges.filter(e => e.from === node.id).map(e => e.to);
+			let parents = data.nodes.filter(n => edges.indexOf(n.id) !== -1);
+			if (parents.length)
+				return Math.max(...parents.map(n => CalculateLevel(n, srcs.concat([node.id]))));
+			return 0;
+		}
+
+		ge = GraphEditor('body', true, true);
+		data.nodes.forEach(n => ge.SetElement('node' + n.id, 'defaultNode', {label: '' + n.id}, {
+			color: n.group === '1' ? '#00FB73' : undefined,
+			//level: CalculateLevel(n),
+		}));
+		data.edges.forEach(e => ge.SetElement('edge' + e.id, 'defaultEdge', {}, {from: 'node' + e.from, to: 'node' + e.to}));
+
+
+	});
+</script>
+</html>
