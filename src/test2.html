@@ -39,6 +39,12 @@
 		//All ids must be string!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		//Create graph in container 'body'.
 		ge = GraphEditor('body', true, true);
+		ge.engine.onCreateNode.Subscribe(e => {
+			Incoming(()=>{
+				console.log('creating', ge.GetElement(e.id));
+			});
+			return e;
+		});
 		//Create data graph
 		dg = DataGraph(ge);
 		//Create data processors types.
@@ -54,21 +60,25 @@
 			 */
 			processorData.outputs = processorData.outputs.map(_ => 'ABCD'); //Just set all edges to ABCD.
 			//Must origin or changed return processor data.
+			console.log(processorData);
 			return processorData;
 		});
-		dg.SetProcessorType('columnSelector', 'Колонка', 'Выбирает колонку из датафрейма', 'hidden', {'Колонка': ['customSelect', ['*']], 'label': ['hiddenLabel', 'column selector']}, ['defaultNode'], function (processorData, processorElement, inputs, outputs) {
+
+		function UpdateOutputsOnChangeOrOutput(processorData, processorElement, inputs, outputs) {
+			//Processor's outputs or selected option changed (processor - element of this type).
+			//Set outputs to selected option.
+			processorData.outputs = processorData.outputs.map(_ => processorData.parameters['Колонка'][0]); //Just set all edges to ABCD.
+			//Must origin or changed return processor data.
+			return processorData;
+		}
+
+		dg.SetProcessorType('columnSelector', 'Колонка', 'Выбирает колонку из датафрейма', 'hidden', {'Колонка': ['customSelect', ['*']], 'label': ['hiddenLabel', 'column selector']}, ['defaultNode'], UpdateOutputsOnChangeOrOutput, function (processorData, processorElement, inputs, outputs) {
 			//Processor's parameters changed (processor - element of this type).
 			//Set options as sliced value of first input data.
 			processorData.parameters['Колонка'] = processorData.inputs.length && processorData.inputs[0] ? processorData.inputs[0].split('') : ['*']; //values can be undefined
 			//Must origin or changed return processor data.
 			return processorData;
-		}, dg.dummyHandler, function (processorData, processorElement, inputs, outputs) {
-			//Processor's outputs changed (processor - element of this type).
-			//Set outputs to selected option.
-			processorData.outputs = processorData.outputs.map(_ => processorData.parameters['Колонка'][0]); //Just set all edges to ABCD.
-			//Must origin or changed return processor data.
-			return processorData;
-		});
+		}, UpdateOutputsOnChangeOrOutput);
 		//Create nodes and connect them: datasource->columnSelector->columnSelector
 		ge.SetElement('a', 'datasource');
 		ge.SetElement('b', 'columnSelector');
