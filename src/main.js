@@ -192,17 +192,12 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		//Element styles
 		scope.SetElementStyle('defaultNode', 'node', {
 			color: "#80aef5",
-			shape: "circle",
+			shape: "ellipse",
 			label: 'Узел'
 		});
 		scope.SetElementStyle('defaultEdge', 'edge', {
 			arrows: "to",
 			dashes: false,
-			color: {inherit: "both"},
-		});
-		scope.SetElementStyle('dashedEdge', 'edge', {
-			arrows: "to",
-			dashes: true,
 			color: {inherit: "both"},
 		});
 		//Element properties
@@ -211,7 +206,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		//Element types
 		scope.SetElementType('defaultNode', 'node', 'Узел', 'Стандартный вид', 'blue', ['label'], ['defaultNode']);
 		scope.SetElementType('defaultEdge', 'edge', 'Сплошное ребро', 'Обычное ребро', 'hidden', [], ['defaultEdge']);
-		scope.SetElementType('dashedEdge', 'edge', 'Штрихованное ребро', 'Пунктир', 'hidden', [], ['dashedEdge']);
 	}
 
 	function CreateBindings() {
