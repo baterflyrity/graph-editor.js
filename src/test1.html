@@ -5,7 +5,7 @@
 	<title>Graph editor example</title>
 	<!--jQuery-->
 	<script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
-	
+
 	<!--Semantic-UI-->
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css" integrity="sha256-9mbkOfVho3ZPXfM7W8sV2SndrGDuh7wuyLjtsWeTI1Q=" crossorigin="anonymous"/>
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/button.min.css" integrity="sha256-xtpiJw1+6DW1Oac4CVyU7PbCxHxufOBIspA9T79Y384=" crossorigin="anonymous"/>
@@ -22,12 +22,12 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/dropdown.min.js" integrity="sha256-uEocYy6a0MpPLLHtYV7QAGdOeMRwE0Am2WtnOg/hBfM=" crossorigin="anonymous"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/modal.min.js" integrity="sha256-8POmd6680Gev+MdgKbVOHP+9lm+9WB1AVyuLf2WRcxc=" crossorigin="anonymous"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/components/transition.min.js" integrity="sha256-k30cmb6hiQ/LGKpX2AcllUduUJ0kA4DKKStgUxkGQzM=" crossorigin="anonymous"></script>
-	
+
 	<!--Vis.js Network-->
 	<script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 	<!--	<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css">-->
 	<!--	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>-->
-	
+
 	<!--Graph Editor-->
 	<link rel="stylesheet" type="text/css" href="style.css">
 	<script type="text/javascript" src="main.js"></script>
@@ -97,7 +97,7 @@
 		ge.SetElement('b', 'defaultNode', {label: 'Узел2'});
 		ge.SetElement('d', 'customTitledNode', {label: 'dynamic', customTitle: '{a:1,b:2,c:3}'});
 		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'a', to: 'b'});
-		ge.SetElement(GraphEditor.GenerateID(), 'dashedEdge', {}, {from: 'a', to: 'c'});
+		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'a', to: 'c'});
 		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'c', to: 'd'});
 		//Update options on titledNode changed. Subscribe before setting node c to init d by initing c.
 		ge.onSetElement.Subscribe(function (element) {
