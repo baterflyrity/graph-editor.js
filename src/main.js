@@ -1,8 +1,4 @@
-/*
- container - селектор/dom-элемент/jQuery, будет использован первый элемент из выборки
- nodeStyles - массив стилей узлов (https://visjs.github.io/vis-network/docs/network/nodes.html)
- edgeStyles - массив стилей рёбер (https://visjs.github.io/vis-network/docs/network/edges.html)
- */
+//Last release: 1.1
 function GraphEditor(container, hierarchical = true, editable = true) {
 	//TODO: убрать старые куски кода.
 
