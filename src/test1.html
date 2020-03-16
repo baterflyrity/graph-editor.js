@@ -46,7 +46,7 @@
 		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'a', to: 'b'});
 		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'a', to: 'c'});
 		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'c', to: 'd'});
-		//Update options on titledNode changed. Subscribe before setting node c to init d by initing c.
+		//Update options on titledNode changed. Subscribe before setting node c to init d by initiating c.
 		ge.onSetElement.Subscribe(function (element) {
 			//Handle titledNode by it's ID.
 			if (element.elementID === 'c') {
