@@ -554,7 +554,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			element = ValidateElement(element);
 			let elementType = scope.GetElementType(element.elementTypeID);
 			element.elementPropertiesValues = Object.assign({}, elementType.propertiesValues, element.elementPropertiesValues);
-			element.cachedTypedPropertiesValues = jQuery.extend(true, element.cachedTypedPropertiesValues, {[element.elementTypeID]: Object.assign({}, element.elementPropertiesValues)});
+			element.cachedTypedPropertiesValues = jQuery.extend(true, {}, {[element.elementTypeID]: Object.assign({}, element.elementPropertiesValues)}, element.cachedTypedPropertiesValues);
 			element.visTemplate = Object.assign({}, elementType.visTemplate, elementClassArguments, {id: element.elementID});
 			let event = !scope.GetElement(element.elementID) ? scope.onCreateElement : scope.onSetElement;
 			element = triggerEvents ? event.Trigger(element) : element;
