@@ -154,6 +154,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		}
 
 		function ConstructCustomMultiSelect(elementProperty, propertyValue, element) {
+			console.log(elementProperty, element);
 			return ConstructDropdown(elementProperty.propertyName, propertyValue.options, propertyValue.value, true);
 		}
 
