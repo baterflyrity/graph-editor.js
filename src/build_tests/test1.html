@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Graph editor example</title>
+	<!--jQuery-->
+	<script src="dependencies/jquery-3.4.1.min.js"></script>
+	
+	<!--Semantic-UI-->
+	<link rel="stylesheet" href="dependencies/semantic-ui/semantic.css"/>
+	<script src="dependencies/semantic-ui/semantic.js"></script>
+	
+	<!--Vis.js Network-->
+	<script type="text/javascript" src="dependencies/vis-network.js"></script>
+	
+	<!--Graph Editor-->
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<script type="text/javascript" src="main.js"></script>
+</head>
+<body>
+</body>
+<script>
+	$(function () {
+		// let blueNodeType = GraphEditor.CreateType('Синий узел', 'Эллипсы синего цвета', 'blue', {
+		// 	color: '#8dd0f8',
+		// 	shape: 'ellipse'
+		// });
+		// let redNodeType = GraphEditor.CreateType('Красный узел', 'Красные узлы без маркера', 'hidden', {
+		// 	color: 'red'
+		// });
+		// let nodeStyles = GraphEditor.CreateStyles(blueNodeType, redNodeType);
+		// window.ge = GraphEditor('body', nodeStyles);
+
+
+		// let data = {'Курс': 'Курс', 'Став': 'Став', 'Объем': 'Объем', 'Цена': 'Цена', 'Объем 1': 'Объем 1'}
+		//
+		// let inputNodeType = GraphEditor.CreateType_old('qwe', 'Вход', 'Эллипсы синего цвета', '#8dd0f8', {
+		// 	color: '#8dd0f8',
+		// 	shape: 'circle'
+		// });
+		// let featureNodeType = GraphEditor.CreateType_old('asd', 'Признак', 'Признаки', '#b7f9c2', {
+		// 	color: '#b7f9c2',
+		// 	shape: 'ellipse'
+		// }, data);
+		// let outputNodeType = GraphEditor.CreateType_old('zxc', 'Модель', 'Модель', '#80aef5', {
+		// 	color: '#80aef5',
+		// 	shape: 'circle'
+		// });
+		//
+		// let nodeStyles = GraphEditor.CreateStyles_old(inputNodeType, featureNodeType, outputNodeType);
+		//
+		// ge = GraphEditor('body', nodeStyles, Object.values(data));
+		//
+		// ge.addNode('input', 'qwe', 'Вход')
+		// ge.addNode('output', 'zxc', 'Модель')
+		//
+		// for (let col_code in data) {
+		// 	ge.addNode(col_code, 'asd', col_code);
+		// 	ge.addEdge('input', col_code, col_code + '_1', '0');
+		// 	ge.addEdge(col_code, 'output', col_code + '_2', '1');
+		// }
+		//
+		// ge.engine.nodes.add(ge.data[GraphEditor.ElementClasses.node.classID].get());
+		// ge.engine.edges.add(ge.data[GraphEditor.ElementClasses.edge.classID].get());
+
+
+		//All ids must be string!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		//Create graph in container 'body'.
+		ge = GraphEditor('body');
+		//Create node display style.
+		ge.SetElementStyle('greenNode', 'node', Object.assign({}, ge.GetElementStyle('defaultNode'), {color: 'green'})); //Just copied defaultNode style and changed color.
+		ge.SetElementStyle('redNode', 'node', Object.assign({}, ge.GetElementStyle('defaultNode'), {color: 'red'}));
+		//Create editable property from predefined class.
+		ge.SetElementProperty('title', 'map', 'Название (выбрать)', {course: 'Курс', stav: 'Став', volume: 'Объем', cost: 'Цена', vol1: 'Объем 1'});
+		ge.SetElementProperty('customTitle', 'customMap', 'Название (выбрать)', {a: 1, b: 2, c: 3});
+		//Create node type with defined style and property. It has no label, so no binding would automatically happen.
+		ge.SetElementType('titledNode', 'node', 'Признак', 'Выбираемое название', 'green', ['title'], ['greenNode']);
+		//This node type will have dynamic select, defined by element value as array of strings.
+		ge.SetElementType('customTitledNode', 'node', 'Признак (зависимый)', 'Динамическое название', 'red', ['label', 'customTitle'], ['redNode']);
+		//Create nodes and edges (generate random id).
+		ge.SetElement('a', 'defaultNode');
+		ge.SetElement('b', 'defaultNode', {label: 'Узел2'});
+		ge.SetElement('d', 'customTitledNode', {label: 'dynamic', customTitle: '{a:1,b:2,c:3}'});
+		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'a', to: 'b'});
+		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'a', to: 'c'});
+		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'c', to: 'd'});
+		//Update options on titledNode changed. Subscribe before setting node c to init d by initing c.
+		ge.onSetElement.Subscribe(function (element) {
+			//Handle titledNode by it's ID.
+			if (element.elementID === 'c') {
+				//Find node d.
+				let d = ge.GetElement('d');
+				//Node d has customTitle property, so it's value defines it's options.
+				d.elementPropertiesValues.customTitle = JSON.stringify(Object.fromEntries([1, 2, 3].map(i => ['abc'[i], element.elementPropertiesValues.title + " " + i])));//Selected in node c option plus 1, 2 or 3 number. Number 1 will be preselected.
+				//Update node d. Sorry, no special method now, use constructor.
+				ge.SetElement(d.elementID, d.elementTypeID, d.elementPropertiesValues, d.elementClassArguments, d.nestedGraph, d.cachedTypedPropertiesValues);
+			}
+			//Type of this event is 'pipe', so must return element.
+			return element;
+		});
+		//Now create node c and it will update node d.
+		ge.SetElement('c', 'titledNode', {title: 'stav'});
+
+	});
+</script>
+</html>

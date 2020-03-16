@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Graph editor example</title>
+	<!--jQuery-->
+	<script src="dependencies/jquery-3.4.1.min.js"></script>
+	
+	<!--Semantic-UI-->
+	<link rel="stylesheet" href="dependencies/semantic-ui/semantic.css"/>
+	<script src="dependencies/semantic-ui/semantic.js"></script>
+	
+	<!--Vis.js Network-->
+	<script type="text/javascript" src="dependencies/vis-network.js"></script>
+	
+	<!--Graph Editor-->
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<script type="text/javascript" src="main.js"></script>
+</head>
+<body>
+</body>
+<script>
+	$(function () {
+
+		//Test layout
+		let data = {
+			"nodes": [
+				{
+					"id": 1,
+					"group": "0",
+					"label": "Уголь",
+					"meta": "asd",
+					"x": 0,
+					"y": 0,
+					"selfCost": 10
+				},
+				{
+					"id": 2,
+					"group": "0",
+					"label": "Железо",
+					"x": 0,
+					"y": 0,
+					"selfCost": 15
+				},
+				{
+					"id": 3,
+					"group": "0",
+					"label": "Сталь",
+					"x": 0,
+					"y": 0,
+					"selfCost": 5
+				},
+				{
+					"id": 4,
+					"group": "0",
+					"label": "Труд",
+					"x": 0,
+					"y": 0,
+					"selfCost": 300
+				},
+				{
+					"id": 5,
+					"group": "0",
+					"label": "Паровые машины",
+					"x": 0,
+					"y": 0,
+					"selfCost": 10
+				},
+				{
+					"id": 6,
+					"group": "1",
+					"label": "Модель",
+					"x": 0,
+					"y": 0
+				},
+				{
+					"id": 7,
+					"group": "0",
+					"label": "Уголь",
+					"meta": "asd",
+					"x": 0,
+					"y": 0,
+					"selfCost": 10
+				},
+				{
+					"id": 8,
+					"group": "0",
+					"label": "Сталь",
+					"x": 0,
+					"y": 0,
+					"selfCost": 20
+				},
+				{
+					"id": 9,
+					"group": "0",
+					"label": "Паровые машины",
+					"x": 0,
+					"y": 0,
+					"selfCost": 60
+				},
+				{
+					"id": 10,
+					"group": "1",
+					"label": "Целевые показатели",
+					"x": 0,
+					"y": 0
+				},
+				{
+					"id": 11,
+					"group": "0",
+					"label": "Уголь",
+					"meta": "asd",
+					"x": 0,
+					"y": 0,
+					"selfCost": 10
+				},
+				{
+					"id": 12,
+					"group": "0",
+					"label": "Сталь",
+					"x": 0,
+					"y": 0,
+					"selfCost": 20
+				},
+				{
+					"id": 13,
+					"group": "0",
+					"label": "Паровые машины",
+					"x": 0,
+					"y": 0,
+					"selfCost": 60
+				}
+			],
+			"edges": [
+				{
+					"from": 1,
+					"to": 2,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "1",
+					"cost": 20
+				},
+				{
+					"from": 1,
+					"to": 3,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "2",
+					"cost": 50
+				},
+				{
+					"from": 1,
+					"to": 5,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "3",
+					"cost": 70
+				},
+				{
+					"from": 2,
+					"to": 3,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "4",
+					"cost": 50
+				},
+				{
+					"from": 3,
+					"to": 1,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "5",
+					"cost": 5
+				},
+				{
+					"from": 3,
+					"to": 2,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "6",
+					"cost": 5
+				},
+				{
+					"from": 3,
+					"to": 4,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "7",
+					"cost": 20
+				},
+				{
+					"from": 3,
+					"to": 5,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "8",
+					"cost": 80
+				},
+				{
+					"from": 4,
+					"to": 1,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "9",
+					"cost": 70
+				},
+				{
+					"from": 4,
+					"to": 2,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "10",
+					"cost": 65
+				},
+				{
+					"from": 4,
+					"to": 3,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "11",
+					"cost": 50
+				},
+				{
+					"from": 4,
+					"to": 5,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "12",
+					"cost": 30
+				},
+				{
+					"from": 5,
+					"to": 1,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "13",
+					"cost": 30
+				},
+				{
+					"from": 5,
+					"to": 2,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "14",
+					"cost": 35
+				},
+				{
+					"from": 5,
+					"to": 3,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "15",
+					"cost": 50
+				},
+				{
+					"from": 5,
+					"to": 4,
+					"arrows": "to",
+					"dashes": false,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "16",
+					"cost": 80
+				},
+				{
+					"from": 1,
+					"to": 6,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "17"
+				},
+				{
+					"from": 2,
+					"to": 6,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "18"
+				},
+				{
+					"from": 3,
+					"to": 6,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "19"
+				},
+				{
+					"from": 4,
+					"to": 6,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "20"
+				},
+				{
+					"from": 5,
+					"to": 6,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "21"
+				},
+				{
+					"from": 6,
+					"to": 7,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "22"
+				},
+				{
+					"from": 6,
+					"to": 8,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "23"
+				},
+				{
+					"from": 6,
+					"to": 9,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "24"
+				},
+				{
+					"from": 7,
+					"to": 10,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "25"
+				},
+				{
+					"from": 8,
+					"to": 10,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "26"
+				},
+				{
+					"from": 9,
+					"to": 10,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "27"
+				},
+				{
+					"from": 10,
+					"to": 11,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "28"
+				},
+				{
+					"from": 10,
+					"to": 12,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "29"
+				},
+				{
+					"from": 10,
+					"to": 13,
+					"arrows": "to",
+					"dashes": true,
+					"color": {
+						"inherit": "both"
+					},
+					"id": "30"
+				}
+			]
+		};
+
+		function CalculateLevel(node, srcs = []) {
+			if (srcs.indexOf(node.id) !== -1) return -1;
+			let edges = data.edges.filter(e => e.from === node.id).map(e => e.to);
+			let parents = data.nodes.filter(n => edges.indexOf(n.id) !== -1);
+			if (parents.length)
+				return Math.max(...parents.map(n => CalculateLevel(n, srcs.concat([node.id]))));
+			return 0;
+		}
+
+		ge = GraphEditor('body', true, true);
+		data.nodes.forEach(n => ge.SetElement('node' + n.id, 'defaultNode', {label: '' + n.id}, {
+			color: n.group === '1' ? '#00FB73' : undefined,
+			//level: CalculateLevel(n),
+		}));
+		data.edges.forEach(e => ge.SetElement('edge' + e.id, 'defaultEdge', {}, {from: 'node' + e.from, to: 'node' + e.to}));
+
+
+	});
+</script>
+</html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Graph editor example</title>
+	<!--jQuery-->
+	<script src="dependencies/jquery-3.4.1.min.js"></script>
+	
+	<!--Semantic-UI-->
+	<link rel="stylesheet" href="dependencies/semantic-ui/semantic.css"/>
+	<script src="dependencies/semantic-ui/semantic.js"></script>
+	
+	<!--Vis.js Network-->
+	<script type="text/javascript" src="dependencies/vis-network.js"></script>
+	
+	<!--Graph Editor-->
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<script type="text/javascript" src="main.js"></script>
+</head>
+<body>
+</body>
+<script>
+	$(function () {
+		//All ids must be string!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		//Create graph in container 'body'.
+		ge = GraphEditor('body', true, true);
+		ge.engine.onCreateNode.Subscribe(e => {
+			Incoming(()=>{
+				console.log('creating', ge.GetElement(e.id));
+			});
+			return e;
+		});
+		//Create data graph
+		dg = DataGraph(ge);
+		//Create data processors types.
+		dg.SetProcessorType('datasource', 'Источник данных', '[a, b, c, d]', 'hidden', {'label': ['hiddenLabel', 'datasource']}, ['defaultNode'], dg.dummyHandler, dg.dummyHandler, function (processorData, processorElement, inputs, outputs) {
+			//Processor's outputs changed (processor - element of this type).
+			//Set output data on all edges to ABCD.
+			/*
+			 processorData = {
+			 parameters: {paramName: paramValue},
+			 inputs: [values],
+			 outputs: [values]
+			 }
+			 */
+			processorData.outputs = processorData.outputs.map(_ => 'ABCD'); //Just set all edges to ABCD.
+			//Must origin or changed return processor data.
+			console.log(processorData);
+			return processorData;
+		});
+
+		function UpdateOutputsOnChangeOrOutput(processorData, processorElement, inputs, outputs) {
+			//Processor's outputs or selected option changed (processor - element of this type).
+			//Set outputs to selected option.
+			processorData.outputs = processorData.outputs.map(_ => processorData.parameters['Колонка'][0]); //Just set all edges to ABCD.
+			//Must origin or changed return processor data.
+			return processorData;
+		}
+
+		dg.SetProcessorType('columnSelector', 'Колонка', 'Выбирает колонку из датафрейма', 'hidden', {'Колонка': ['customSelect', ['*']], 'label': ['hiddenLabel', 'column selector']}, ['defaultNode'], UpdateOutputsOnChangeOrOutput, function (processorData, processorElement, inputs, outputs) {
+			//Processor's parameters changed (processor - element of this type).
+			//Set options as sliced value of first input data.
+			processorData.parameters['Колонка'] = processorData.inputs.length && processorData.inputs[0] ? processorData.inputs[0].split('') : ['*']; //values can be undefined
+			//Must origin or changed return processor data.
+			return processorData;
+		}, UpdateOutputsOnChangeOrOutput);
+		//Create nodes and connect them: datasource->columnSelector->columnSelector
+		ge.SetElement('a', 'datasource');
+		ge.SetElement('b', 'columnSelector');
+		ge.SetElement('c', 'columnSelector');
+		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'a', to: 'b'});
+		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'b', to: 'c'});
+
+	});
+</script>
+</html>
