@@ -100,89 +100,86 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		//Element classes
 		scope.SetElementClass('node', {x: 0, y: 0});
 		scope.SetElementClass('edge', {from: 0, to: 0});
+
 		//Property classes
-		scope.SetPropertyClass('text', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}">
-	<label>${elementProperty.propertyName}: </label>
-	<div style="display:inline-block;" contenteditable="true" data-placeholder="${elementProperty.propertyDefaultValue}">${propertyValue}</div>
-</div>`, $propertyDOM => $propertyDOM.find('[contenteditable]').text());
-		scope.SetPropertyClass('select', (elementProperty, propertyValue) => {
-			let val = typeof (propertyValue) === 'string' && propertyValue.length ? propertyValue : elementProperty.propertyDefaultValue[0];
-			let availableOptions = elementProperty.propertyDefaultValue.map(option => `<div class="item" data-value="${option}" data-text='${option}'>
-														<span class="description">${option}</span>
-													</div>`);
-			let $dom = jQuery(`<div data-property="${elementProperty.propertyID}">
-	<label>${elementProperty.propertyName}: </label>
-	<div class="ui inline dropdown">
-		<input type="hidden" value="${val}">
-		<div class="text">${val}</div>
-		<i class="dropdown icon"></i>
-		<div class="menu">${availableOptions.join('')}</div>
-	</div>
+		function ConstructText(elementProperty, propertyValue, element) {
+			return `<label>${elementProperty.propertyName}: </label>
+<div style="display:inline-block;" contenteditable="true" data-placeholder="${elementProperty.propertyDefaultValue}">${propertyValue}</div>`;
+		}
+
+		function ParseText($propertyDOM, elementProperty, element) {
+			return $propertyDOM.find('[contenteditable]').text();
+		}
+
+		function ConstructDropdown(label, options, defaultValue, multiple = false, searchable = true, autosearchable = true) {
+			options = options.constructor !== Array ? Object.entries(options) : options.map((option, index) => [index, option]);
+			options = options.map(([optionValue, option]) => {
+				if (typeof (option) !== 'string')
+					return Object.assign({value: optionValue}, option);
+				return {
+					value: '' + optionValue,
+					shortContent: '' + option,
+					longContent: '' + option,
+				};
+			});
+			console.log(options, defaultValue);
+			if (!options.length) throw `No options available for dropdown ${label}.`;
+			if (!defaultValue) defaultValue = multiple ? [options[0].value] : options[0].value;
+			let attributes = [];
+			if (searchable && (!autosearchable || options.length > 5)) attributes.push('search');
+			if (multiple) attributes.push('multiple');
+			let optionsHTML = options.map(option => `<div class="item" data-value="${option.value}" data-text='${option.shortContent}'>${option.longContent}</div>`);
+			let $dom = jQuery(`<div><label>${label}: </label>
+<div class="property ui fluid inline selection ${attributes.join(' ')} dropdown">
+	<input type="hidden" value="">
+	<i class="dropdown icon"></i>
+	<div class="default text"></div>	
+	<div class="menu">${optionsHTML.join('')}</div>
+</div>
 </div>`);
-			$dom.find('.dropdown').dropdown().dropdown('set exactly', '' + val);
+			Incoming(() => {
+				$dropdown = $dom.find('.property.dropdown').dropdown();
+				if (multiple) defaultValue.forEach(val => $dropdown.dropdown('set selected', val));
+				else $dropdown.dropdown('set selected', defaultValue);
+			});
 			return $dom;
-		}, $propertyDOM => $propertyDOM.find('.ui.inline.dropdown').dropdown('get value'));
-		scope.SetPropertyClass('customSelect', (elementProperty, propertyValue) => {
-			let val = propertyValue[0];
-			let availableOptions = propertyValue.map(option => `<div class="item" data-value="${option}" data-text='${option}'>
-														<span class="description">${option}</span>
-													</div>`);
-			let $dom = jQuery(`<div data-property="${elementProperty.propertyID}">
-	<label>${elementProperty.propertyName}: </label>
-	<div class="ui inline dropdown">
-		<input type="hidden" value="${val}">
-		<div class="text">${val}</div>
-		<i class="dropdown icon"></i>
-		<div class="menu">${availableOptions.join('')}</div>
-	</div>
-</div>`);
-			$dom.find('.dropdown').dropdown().dropdown('set exactly', '' + val);
-			return $dom;
-		}, $propertyDOM => {
-			let options = $propertyDOM.find('.item').toArray().map(item => $(item).data('value'));
-			let val = $propertyDOM.find('.ui.inline.dropdown').dropdown('get value');
-			return [val].concat(options.filter(opt => opt !== val));
-		});
-		scope.SetPropertyClass('map', (elementProperty, propertyValue) => {
-			let options = Object.entries(elementProperty.propertyDefaultValue);
-			let val = typeof (propertyValue) === 'string' && propertyValue.length ? propertyValue : (options[0][0]);
-			let availableOptions = options.map(([optionValue, optionText]) => `<div class="item" data-value="${optionValue}" data-text='${optionText}'>
-														<span class="description">${optionText}</span>
-													</div>`);
-			let $dom = jQuery(`<div data-property="${elementProperty.propertyID}">
-	<label>${elementProperty.propertyName}: </label>
-	<div class="ui inline dropdown">
-		<input type="hidden" value="${val}">
-		<div class="text">${val}</div>
-		<i class="dropdown icon"></i>
-		<div class="menu">${availableOptions.join('')}</div>
-	</div>
-</div>`);
-			$dom.find('.dropdown').dropdown().dropdown('set exactly', '' + val);
-			return $dom;
-		}, $propertyDOM => $propertyDOM.find('.ui.inline.dropdown').dropdown('get value'));
-		scope.SetPropertyClass('customMap', (elementProperty, propertyValue) => {
-			let options = Object.entries(JSON.parse(propertyValue));
-			let val = options[0][0];
-			let availableOptions = options.map(([optionValue, optionText]) => `<div class="item" data-value="${optionValue}" data-text='${optionText}'>
-														<span class="description">${optionText}</span>
-													</div>`);
-			let $dom = jQuery(`<div data-property="${elementProperty.propertyID}">
-	<label>${elementProperty.propertyName}: </label>
-	<div class="ui inline dropdown">
-		<input type="hidden" value="${val}">
-		<div class="text">${val}</div>
-		<i class="dropdown icon"></i>
-		<div class="menu">${availableOptions.join('')}</div>
-	</div>
-</div>`);
-			$dom.find('.dropdown').dropdown().dropdown('set exactly', '' + val);
-			return $dom;
-		}, $propertyDOM => {
-			let options = $propertyDOM.find('.item').toArray().map(item => [$(item).data('value'), $(item).data('text')]);
-			let val = [$propertyDOM.find('.ui.inline.dropdown').dropdown('get value'), $propertyDOM.find('.ui.inline.dropdown').dropdown('get text')];
-			return JSON.stringify(Object.fromEntries([val].concat(options.filter(opt => opt[0] !== val[0] && opt[1] !== val[1]))));
-		});
+		}
+
+		function ParseDropdown($propertyDOM) {
+			return $propertyDOM.find('.property.dropdown').dropdown('get value');
+		}
+
+		function ParseMultiDropdown($propertyDOM) {
+			let val = ParseDropdown($propertyDOM);
+			return val ? val.split(',') : [];
+		}
+
+		function ConstructCustomMultiSelect(elementProperty, propertyValue, element) {
+			return ConstructDropdown(elementProperty.propertyName, propertyValue.options, propertyValue.value, true);
+		}
+
+		function ParseCustomSelect($propertyDOM, elementProperty, element) {
+			let value = ParseMultiDropdown($propertyDOM);
+			return Object.assign({}, element.elementPropertiesValues[elementProperty.propertyID], {value: value});
+		}
+
+		function ConstructCustomSelect(elementProperty, propertyValue, element) {
+			return ConstructDropdown(elementProperty.propertyName, propertyValue.options, propertyValue.value);
+		}
+
+		function ConstructMultiSelect(elementProperty, propertyValue, element) {
+			return ConstructDropdown(elementProperty.propertyName, elementProperty.propertyOptions, propertyValue.value, true);
+		}
+
+		function ConstructSelect(elementProperty, propertyValue, element) {
+			return ConstructDropdown(elementProperty.propertyName, elementProperty.propertyOptions, propertyValue.value);
+		}
+
+		scope.SetPropertyClass('text', ConstructText, ParseText);
+		scope.SetPropertyClass('select', ConstructSelect, ParseDropdown);
+		scope.SetPropertyClass('multiSelect', ConstructMultiSelect, ParseDropdown);
+		scope.SetPropertyClass('customSelect', ConstructCustomSelect, ParseCustomSelect);
+		scope.SetPropertyClass('customMultiSelect', ConstructCustomMultiSelect, ParseCustomSelect);
 		scope.SetPropertyClass('hidden', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}" hidden>${propertyValue}</div>`, $propertyDOM => $propertyDOM.text());
 		scope.SetPropertyClass('hiddenLabel', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}" hidden>${propertyValue}</div>`, $propertyDOM => $propertyDOM.text());
 		//Element styles
@@ -478,12 +475,13 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 
 		//region Element properties manipulation
 		elementProperties: {},
-		SetElementProperty: function (propertyID, propertyClassID, propertyName, propertyDefaultValue, triggerEvents = true) {
+		SetElementProperty: function (propertyID, propertyClassID, propertyName, propertyDefaultValue, propertyOptions, triggerEvents = true) {
 			let elementProperty = {
 				propertyID: propertyID,
 				propertyClassID: propertyClassID,
 				propertyName: propertyName,
 				propertyDefaultValue: propertyDefaultValue,
+				propertyOptions: propertyOptions,
 			};
 			let event = !scope.GetElementProperty(elementProperty.propertyID) ? scope.onCreateElementProperty : scope.onSetElementProperty;
 			scope.elementProperties[elementProperty.propertyID] = triggerEvents ? event.Trigger(elementProperty) : elementProperty;
@@ -632,6 +630,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 	 * @param elementClassID {'node'|'edge'}
 	 */
 	function CreateEditor(elementClassID, visElement) {
+		console.log('Creating editor');
 		let element = scope.GetElement(visElement.id);
 		let elementTypes = scope.GetElementType().filter(elementType => elementType.elementClassID === elementClassID);
 		let currentType = scope.GetElementType(element.elementTypeID);
@@ -678,7 +677,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			element.elementPropertiesValues = Object.fromEntries($properties.find('>[data-property]').toArray().map(e => {
 				let $e = jQuery(e);
 				let propertyID = $e.data('property');
-				return [propertyID, scope.GetPropertyClass(scope.GetElementProperty(propertyID).propertyClassID).propertyParser($e)];
+				let elementProperty = scope.GetElementProperty(propertyID);
+				return [propertyID, scope.GetPropertyClass(elementProperty.propertyClassID).propertyParser($e, elementProperty, element)];
 			}));
 			AssertPropertyOrDefault(element.cachedTypedPropertiesValues, element.elementTypeID, {});
 			// noinspection TypeScriptValidateTypes
@@ -687,7 +687,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 
 		function CreateProperties() {
 			let currentProperties = currentType.typePropertiesIDsArray.map(propertyID => scope.GetElementProperty(propertyID));
-			$properties.html('').append(...currentProperties.map(property => scope.GetPropertyClass(property.propertyClassID).propertyConstructor(property, element.elementPropertiesValues[property.propertyID])));
+			$properties.html('').append(...currentProperties.map(property => jQuery(`<div data-property="${property.propertyID}"></div>`).append(scope.GetPropertyClass(property.propertyClassID).propertyConstructor(property, element.elementPropertiesValues[property.propertyID], element))));
 		}
 
 
