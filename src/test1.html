@@ -39,7 +39,7 @@
 		ge.SetElement('b', 'defaultNode', {label: 'Узел2'});
 		ge.SetElement('d', 'customTitledNode', {
 			label: 'dynamic', customTitle: {
-				value: ['1','6'],
+				value: ['1', '6'],
 				options: ['item 0', 'item 1', 'item 2', 'item 3', 'item 4', 'item 5', 'item 6', 'item 7', 'item 8', 'item 9']
 			}
 		});
@@ -53,9 +53,12 @@
 				//Find node d.
 				let d = ge.GetElement('d');
 				//Node d has customTitle property, so it's value defines it's options.
-				d.elementPropertiesValues.customTitle = JSON.stringify(Object.fromEntries([1, 2, 3].map(i => ['abc'[i], element.elementPropertiesValues.title + " " + i])));//Selected in node c option plus 1, 2 or 3 number. Number 1 will be preselected.
+				d.elementPropertiesValues.customTitle = {
+					options: [1, 2, 3].map(i => element.elementPropertiesValues.title + " " + i),//Selected in node c option plus 1, 2 or 3 number. Number 1 will be preselected.
+					value: false, //Any non-true value treated as first option. If no options, '' value is used.
+				};
 				//Update node d. Sorry, no special method now, use constructor.
-				ge.SetElement(d.elementID, d.elementTypeID, d.elementPropertiesValues, d.elementClassArguments, d.nestedGraph, d.cachedTypedPropertiesValues);
+				ge.SetElement('d', d.elementTypeID, d.elementPropertiesValues, d.elementClassArguments, d.nestedGraph, d.cachedTypedPropertiesValues);
 			}
 			//Type of this event is 'pipe', so must return element.
 			return element;

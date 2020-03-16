@@ -122,7 +122,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 					longContent: '' + option,
 				};
 			});
-			console.log(options, defaultValue);
 			if (!options.length) throw `No options available for dropdown ${label}.`;
 			if (!defaultValue) defaultValue = multiple ? [options[0].value] : options[0].value;
 			let attributes = [];
@@ -168,11 +167,11 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		}
 
 		function ConstructMultiSelect(elementProperty, propertyValue, element) {
-			return ConstructDropdown(elementProperty.propertyName, elementProperty.propertyOptions, propertyValue.value, true);
+			return ConstructDropdown(elementProperty.propertyName, elementProperty.propertyOptions, propertyValue, true);
 		}
 
 		function ConstructSelect(elementProperty, propertyValue, element) {
-			return ConstructDropdown(elementProperty.propertyName, elementProperty.propertyOptions, propertyValue.value);
+			return ConstructDropdown(elementProperty.propertyName, elementProperty.propertyOptions, propertyValue);
 		}
 
 		scope.SetPropertyClass('text', ConstructText, ParseText);
@@ -555,12 +554,11 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			element = ValidateElement(element);
 			let elementType = scope.GetElementType(element.elementTypeID);
 			element.elementPropertiesValues = Object.assign({}, elementType.propertiesValues, element.elementPropertiesValues);
-			element.cachedTypedPropertiesValues = jQuery.extend(true, {[element.elementTypeID]: Object.assign({}, element.elementPropertiesValues)}, element.cachedTypedPropertiesValues);
+			element.cachedTypedPropertiesValues = jQuery.extend(true, element.cachedTypedPropertiesValues, {[element.elementTypeID]: Object.assign({}, element.elementPropertiesValues)});
 			element.visTemplate = Object.assign({}, elementType.visTemplate, elementClassArguments, {id: element.elementID});
 			let event = !scope.GetElement(element.elementID) ? scope.onCreateElement : scope.onSetElement;
 			element = triggerEvents ? event.Trigger(element) : element;
 			scope.elements[element.elementID] = ValidateElement(element);
-			console.log(element.cachedTypedPropertiesValues, element.elementPropertiesValues);
 			return [element.elementID];
 		},
 		onValidateElement: CreateEvent('onValidateElement', '(rawElement)->rawElement', 'pipe'),
@@ -630,7 +628,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 	 * @param elementClassID {'node'|'edge'}
 	 */
 	function CreateEditor(elementClassID, visElement) {
-		console.log('Creating editor');
 		let element = scope.GetElement(visElement.id);
 		let elementTypes = scope.GetElementType().filter(elementType => elementType.elementClassID === elementClassID);
 		let currentType = scope.GetElementType(element.elementTypeID);
@@ -693,7 +690,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 
 		let $properties = $editor.find('.content>.description');
 		CreateProperties();
-		let $type = $editor.find('.content>.elementType .dropdown').dropdown({
+		let $type = $editor.find('.content>.elementType .dropdown').dropdown().dropdown('set selected', '' + element.elementTypeID).dropdown({
 			onChange: function (value, text, $choice) {
 				if (value) {
 					SaveAndCacheProperties();
@@ -705,7 +702,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 					CreateProperties();
 				}
 			}
-		}).dropdown('set exactly', '' + element.elementTypeID);
+		});
 		scope.container.find('.graph-editor').append($editor);
 		$editor.transition('fade right');
 		let destructionID = scope.engine.onStopEditing.Subscribe(SelfDestruct)[0];
