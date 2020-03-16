@@ -551,17 +551,18 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				elementClassArguments: elementClassArguments,
 				nestedGraph: nestedGraph,
 				cachedTypedPropertiesValues: cachedTypedPropertiesValues
-			}
+			};
 			if (triggerEvents)
 				element = scope.onValidateElement.Trigger(element);
 			element = ValidateElement(element);
 			let elementType = scope.GetElementType(element.elementTypeID);
 			element.elementPropertiesValues = Object.assign({}, elementType.propertiesValues, element.elementPropertiesValues);
-			element.cachedTypedPropertiesValues = element.cachedTypedPropertiesValues || {[element.elementTypeID]: Object.assign({}, element.propertiesValues)};
+			element.cachedTypedPropertiesValues = jQuery.extend(true, {[element.elementTypeID]: Object.assign({}, element.elementPropertiesValues)}, element.cachedTypedPropertiesValues);
 			element.visTemplate = Object.assign({}, elementType.visTemplate, elementClassArguments, {id: element.elementID});
 			let event = !scope.GetElement(element.elementID) ? scope.onCreateElement : scope.onSetElement;
 			element = triggerEvents ? event.Trigger(element) : element;
 			scope.elements[element.elementID] = ValidateElement(element);
+			console.log(element.cachedTypedPropertiesValues, element.elementPropertiesValues);
 			return [element.elementID];
 		},
 		onValidateElement: CreateEvent('onValidateElement', '(rawElement)->rawElement', 'pipe'),
@@ -1225,8 +1226,6 @@ GraphEditor.GenerateID = function () {
 	for (let i = 0; i < 40; i++) id.push((Math.random() * 16 | 0).toString(16));
 	return id.join('');
 }
-
-
 
 
 //BUG #1: spawned two copies of editor for each node.
