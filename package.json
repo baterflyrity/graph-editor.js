@@ -6,7 +6,7 @@
     "gulp-concat": "latest",
     "gulp-order": "^1.2.0",
     "gulp-print": "^5.0.2",
-    "gulp-terser": "latest",
-    "gulp-rename": "latest"
+    "gulp-rename": "latest",
+    "gulp-terser": "latest"
   }
 }

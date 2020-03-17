@@ -1,4 +1,4 @@
-const {src, dest, series, parallel} = require('gulp');
+const {src, dest, series, parallel, task} = require('gulp');
 const terser = require('gulp-terser');
 const concat = require('gulp-concat');
 const del = require('del');
@@ -6,6 +6,9 @@ const cleanCSS = require('gulp-clean-css');
 const order = require("gulp-order");
 const print = require('gulp-print').default;
 const rename = require("gulp-rename");
+
+
+
 
 
 function javascript(cb) {
@@ -42,7 +45,7 @@ function css(cb) {
 }
 
 function otherFiles(cb) {
-	return src(['src/vendor/semantic-ui/**/*.*','!src/vendor/semantic-ui/**/*.js', '!src/vendor/semantic-ui/**/*.css'])
+	return src(['src/vendor/semantic-ui/**/*.*', '!src/vendor/semantic-ui/**/*.js', '!src/vendor/semantic-ui/**/*.css'])
 		.pipe(rename(function (path) {
 			path.dirname = "./";
 		}))
@@ -54,5 +57,6 @@ function clean(cb) {
 }
 
 exports.default = series(clean, parallel(javascript, css, otherFiles));
+
 
 

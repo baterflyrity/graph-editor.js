@@ -970,7 +970,9 @@ function CreateNestedEvent(eventName, eventDescription = undefined, ...parentEve
 }
 
 function ValidateID(id) {
-	return '' + id;
+	if (typeof (id) !== 'string')
+		throw `ID ${id} must be string.`;
+	return id;
 }
 
 
