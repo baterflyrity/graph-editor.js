@@ -25,7 +25,7 @@
 		//Create graph in container 'body'.
 		ge = GraphEditor('body', true, true);
 		ge.engine.onCreateNode.Subscribe(e => {
-			Incoming(()=>{
+			Schedule(()=>{
 				console.log('creating', ge.GetElement(e.id));
 			});
 			return e;

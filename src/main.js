@@ -2,8 +2,6 @@
 function GraphEditor(container, hierarchical = true, editable = true) {
 	//TODO: убрать старые куски кода.
 
-	let nodeStyles, titles = ['Новый узел'], edgeStyles, nodesData, edgesData;
-
 	/**
 	 * Check own property existence. In case object does not contain such property and default value defined assignes that property to object and also returns true.
 	 * @param propertyDefaultValue Can be omitted or undefined to return false in case such property does not exist.
@@ -73,20 +71,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		return rawElementOrElement;
 	}
 
-	function SelectPropertyDefaultValue(defaultValue) {
-		switch (Object.prototype.toString.call(defaultValue)) {
-			case '[object Array]':
-				return defaultValue.length ? defaultValue[0] : '';
-			case '[object Object]':
-				return JSON.stringify(defaultValue);
-			case '[object Null]':
-			case '[object Undefined]':
-			case '[object Function]':
-				return '';
-		}
-		return '' + defaultValue;
-	}
-
 	function SerializeFunction(foo) {
 		return foo.toString();
 	}
@@ -136,7 +120,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 	<div class="menu">${optionsHTML.join('')}</div>
 </div>
 </div>`);
-			Incoming(() => {
+			Schedule(() => {
 				$dropdown = $dom.find('.property.dropdown').dropdown();
 				if (multiple) defaultValue.forEach(val => $dropdown.dropdown('set selected', val));
 				else $dropdown.dropdown('set selected', defaultValue);
@@ -326,30 +310,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		},
 		//upload - set in modal builder.
 		//endregion
-
-
-		addNode: (id, type = 0, label, template = {}) => {
-			scope.engine.graph.storePositions();
-			let pos = {x: 0, y: 0};
-			let nodes = scope.data[GraphEditor.ElementClasses.node.classID].get();
-			if (nodes.length) {
-				pos.x = nodes.map(n => n.x).reduce((a, b) => a + b) / nodes.length;
-				pos.y = nodes.map(n => n.y).reduce((a, b) => a + b) / nodes.length;
-				pos.x += Math.random() * 100 - 50;
-				pos.y += Math.random() * 100 - 50;
-			}
-
-			// TODO Вот из-за этой строки всё ломалось: setTimeout(() => StabilizeFitZoom(), 1);
-			let element = jQuery.extend(true, scope.types[GraphEditor.ElementClasses.node.classID][type].template, {id: id, type: type, label: label}, pos, template);
-			return scope.data[GraphEditor.ElementClasses.node.classID].add(element)[0];
-		},
-		addEdge: (from, to, id, type = 0, template = {}) => {
-			let edge = Object.assign({}, scope.types[GraphEditor.ElementClasses.edge.classID][type].template, {id: id, type: type, from: from, to: to}, template);
-			return scope.data[GraphEditor.ElementClasses.edge.classID].add(edge)[0];
-		},
-		removeNode: id => scope.data[GraphEditor.ElementClasses.node.classID].remove(id),
-		removeEdge: id => scope.data[GraphEditor.ElementClasses.edge.classID].remove(id),
-
 
 		engine: {
 			graph: {},
@@ -579,34 +539,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 
 
 	};
-	// scope.data = {
-	// 	[GraphEditor.ElementClasses.node.classID]: new vis.DataSet(nodesData),
-	// 	[GraphEditor.ElementClasses.edge.classID]: new vis.DataSet(edgesData),
-	// };
-	// scope.types = {
-	// 	[GraphEditor.ElementClasses.node.classID]: nodeStyles ? nodeStyles : GraphEditor.CreateStyles_old(
-	// 		GraphEditor.CreateType_old('0', 'Эллипс', 'Синие эллипсы', 'blue', {
-	// 			color: '#8dd0f8',
-	// 			shape: 'ellipse'
-	// 		}),
-	// 		GraphEditor.CreateType_old('1', 'Прямоугольник', 'Зелёные прямоугольники', 'green', {
-	// 			color: '#82ec93',
-	// 			shape: 'box'
-	// 		})
-	// 	),
-	// 	[GraphEditor.ElementClasses.edge.classID]: edgeStyles ? edgeStyles : GraphEditor.CreateStyles_old(
-	// 		GraphEditor.CreateType_old('0', 'Сплошное', 'Без штриховки', 'hidden', {
-	// 			arrows: 'to',
-	// 			dashes: false,
-	// 			color: {inherit: 'both'}
-	// 		}),
-	// 		GraphEditor.CreateType_old('1', 'Штрихованное', 'Равномерная штриховка', 'hidden', {
-	// 			arrows: 'to',
-	// 			dashes: true,
-	// 			color: {inherit: 'both'}
-	// 		})
-	// 	),
-	// };
 
 	scope.container.html('<div class="graph-editor"></div>');
 
@@ -726,7 +658,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 
 
 	/**
-	 * Crate graph DOM and events, attach to scope. Return jQuery graph object.
+	 * Create graph DOM and events, attach to scope. Return jQuery graph object.
 	 * @returns {jQuery}
 	 */
 	function BuildGraph() {
@@ -745,21 +677,21 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 						if (visEdge.from === visEdge.to) callback(null);
 						else {
 							edgeEditingState = 0;
-							Incoming(() => scope.engine.graph.disableEditMode());
+							Schedule(() => scope.engine.graph.disableEditMode());
 							scope.engine.onStopEditing.Trigger('edge', visEdge);
 							callback(scope.engine.onSetEdge.Trigger(visEdge));
 						}
 					} : false,
 					addNode: editable ? function (visNode, callback) {
 						delete visNode.label;
-						Incoming(() => scope.engine.graph.disableEditMode());
+						Schedule(() => scope.engine.graph.disableEditMode());
 						scope.engine.onStopEditing.Trigger('node', visNode);
 						callback(scope.engine.onCreateNode.Trigger(visNode));
 					} : false,
 					addEdge: editable ? function (visEdge, callback) {
 						delete visEdge.label;
 						delete visEdge.title;
-						Incoming(() => scope.engine.graph.disableEditMode());
+						Schedule(() => scope.engine.graph.disableEditMode());
 						if (visEdge.from !== visEdge.to) {
 							scope.engine.onStopEditing.Trigger('edge', visEdge);
 							callback(scope.engine.onCreateEdge.Trigger(visEdge));
@@ -910,121 +842,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		return $menu;
 	}
 
-	function BuildEditor(elementClass, elementType, saveCallback, deleteCallback) {
-		let elClass = scope.types[elementClass];
-
-		let buf = Object.keys(elClass).map(t => `<div class="item" data-value="${t}" data-text='
-														<div class="ui ${elClass[t].color} empty circular label"></div> ${elClass[t].name}
-													'>
-														<div class="ui ${elClass[t].color} empty circular label"></div> ${elClass[t].name} 
-														<span class="description">${elClass[t].description}</span>
-													</div>`);
-		let labelBuf;
-		if (elementClass === GraphEditor.ElementClasses.edge.classID) {
-			labelBuf = '<div class="label-text" contenteditable="true" data-placeholder="Введите название">Название</div>';
-		} else if (scope.types[elementClass][elementType]['titles']) {
-			let tbuf = Object.keys(titles).map(t => `<div class="item" data-value="${t}" data-text='${titles[t]}'>${titles[t]}</span></div>`);
-			labelBuf = `<div class="ui search selection dropdown"><input type="hidden" value="0" data-property="title">
-								<i class="dropdown icon"></i>
-								<div class="label-text text">Название</div>								
-								<div class="menu">${tbuf.join('')}</div>
-							</div>`;
-		} else {
-			labelBuf = '<div class="label-text" contenteditable="true" data-placeholder="Введите название">Название</div>';
-		}
-
-		let $editor = jQuery(`<div class="class-editor">
-				<div class="ui raised card">
-					<div class="content">
-						<div class="label">${labelBuf}</div>
-						<div class="meta">${elementClass}</div>
-						<div class="description"><p contenteditable="true" data-placeholder="Введите описание">Описание</p>
-							<div class="ui inline labeled dropdown"><input type="hidden" value="0" data-property="type">
-								<div class="text">${jQuery(buf[0]).find('.item').data('text')}</div>
-								<i class="dropdown icon"></i>
-								<div class="menu">${buf.join('')}</div>
-							</div>
-						</div>
-					</div>
-					<div class="ui bottom attached buttons">
-						<button class="delete ui grey button">Удалить</button>
-						<div class="or" data-text="?"></div>
-						<button class="save ui positive button">Сохранить</button>
-					</div>
-				</div>
-			</div>`);
-
-		let $label = $editor.find('.content>.label .label-text');
-		$editor.find('.content>.label .dropdown').dropdown();
-		let $title = $editor.find('.content p[contenteditable="true"]');
-		let $type = $editor.find('.content>.description .dropdown').dropdown();
-		$editor.load = function (graphObject) {
-			$editor.object = graphObject;
-			$label.text(graphObject.label || '');
-			$title.text(graphObject.title || '');
-			$type.dropdown('set exactly', '' + (graphObject.type || '0'));
-			$editor.transition($editor.is(":visible") ? 'jiggle' : 'fade right');
-			return $editor;
-		};
-		$editor.hide = function () {
-			if ($editor.is(":visible"))
-				$editor.transition('fade right');
-		};
-		$editor.find('.save.button').click(function () {
-			SetOrDelete($editor.object, 'label', $label.text().trim());
-			SetOrDelete($editor.object, 'title', $title.text());
-			$editor.object.type = $type.dropdown('get value')[0];
-			$editor.hide();
-			saveCallback(elementClass, $editor.object);
-		});
-		$editor.find('.delete.button').click(function () {
-			$editor.hide();
-			deleteCallback(elementClass, $editor.object);
-		});
-		return $editor;
-	}
-
-	function SetOrDelete(object, property, value) {
-		// TODO Переписать, что удалять если объет содержит такое же свойство, как переданное
-		// if (!value && object.hasOwnProperty(property)) delete object[property];
-		if (!value) delete object[property];
-		else {
-			object[property] = value;
-		}
-		return object;
-	}
-
-	function Update(elementClass, element, save) {
-		scope.graph.storePositions();
-		let pos = scope.data[elementClass].get(element.id);
-		element = Object.assign(element, scope.types[elementClass][element.type].template, pos && pos.hasOwnProperty('x') ? {x: pos.x, y: pos.y} : {});
-		if (save) {
-			scope.data[elementClass].remove(element.id);
-			scope.data[elementClass].add(element);
-		}
-		return element;
-	}
-
-	function StabilizeFitZoom() {
-		scope.engine.graph.stabilize();
-		FitZoom();
-	}
-
 	function FitZoom() {
 		return scope.engine.graph.fit({animation: true});
-		scope.engine.graph.storePositions();
-		let nodes = scope.engine.nodes.get();
-		let x, y;
-		if (!nodes.length) x = y = 0;
-		else {
-			x = nodes.map(n => n.x).reduce((a, b) => a + b) / nodes.length;
-			y = nodes.map(n => n.y).reduce((a, b) => a + b) / nodes.length;
-		}
-		scope.engine.graph.moveTo({
-			position: {x: x, y: y},
-			scale: 2,
-			animation: true
-		});
 	}
 
 	function Download(content, fileName, contentType) {
@@ -1036,8 +855,9 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		//TODO: remove this <a>
 	}
 
+	let $modal = BuildModal();
 	let $graph = BuildGraph();
-	scope.upload = () => BuildModal().show();
+	scope.upload = () => $modal.show();
 	let $menu = editable ? BuildMenu({
 		name: 'addNode',
 		label: 'Новый узел',
@@ -1074,25 +894,6 @@ function CopyObject(object) {
 	return Object.assign({}, object);
 }
 
-function GetArgumentNames(func) {
-	return func.toString()
-		.replace(/((\/\/.*$)|(\/\*[\s\S]*?\*\/)|(\s))/mg, '')
-		.match(/^function\s*[^\(]*\(\s*([^\)]*)\)/m)[1]
-		.split(/,/);
-}
-
-function ZipArrays(arr1, arr2) {
-	return arr1.map((k, i) => [k, arr2[i]]);
-}
-
-function CreateObjectFromArguments(args) {
-	return Object.fromEntries(ZipArrays(GetArgumentNames(args.callee), args));
-}
-
-function CreateObjectFromProperties(objectPropertyName, ...objects) {
-	return Object.fromEntries(objects.map(o => [o[objectPropertyName], o]));
-}
-
 /**
  * Call func right after (not guaranteed) current frame.
  *
@@ -1100,7 +901,7 @@ function CreateObjectFromProperties(objectPropertyName, ...objects) {
  *
  * @return {number}
  */
-function Incoming(func) {
+function Schedule(func) {
 	return setTimeout(func, 0);
 }
 
@@ -1172,53 +973,6 @@ function CreateNestedEvent(eventName, eventDescription = undefined, ...parentEve
 }
 
 
-GraphEditor.CreateElementClass = function (classID, visTemplate) { return CreateObjectFromArguments(arguments); };
-GraphEditor.CreatePropertyClass = function (propertyClassID, propertyConstructor, propertyParser) { return CreateObjectFromArguments(arguments); };
-GraphEditor.CreateElementStyle = function (styleID, elementClass, visTemplate) { return CreateObjectFromArguments(arguments); };
-GraphEditor.CreateElementProperty = function (propertyID, propertyClass, propertyName, propertyDefaultValue) { return CreateObjectFromArguments(arguments); };
-GraphEditor.CreateElementType = function (typeID, elementClass, typeName, typeDescription, typeColor, typePropertiesArray, typeStylesArray) {
-	let otherClasses = typeStylesArray.filter(style => style.elementClass !== elementClass);
-	if (otherClasses.length)
-		throw `Can not create ${elementClass} ${typeName} type with style(s) ${otherClasses.map(style => style.styleID + '[' + style.elementClass + ']').join(', ')}.`;
-	let type = CreateObjectFromArguments(arguments);
-	type.visTemplate = Object.assign({}, elementClass.visTemplate, ...typeStylesArray.map(style => style.visTemplate));
-	type.propertiesValues = Object.fromEntries(typePropertiesArray.map(prop => [prop.propertyID, prop.propertyDefaultValue]));
-	return type;
-};
-GraphEditor.CreateElement = function (elementID, elementType, elementPropertiesValuesDict = {}, ...elementClassArguments) {
-	let propsVals = Object.assign({}, elementType.propertiesValues, elementPropertiesValuesDict);
-	return {
-		elementID: elementID,
-		propertiesValues: propsVals,
-		visTemplate: Object.assign({}, elementType.visTemplate, Object.fromEntries(ZipArrays(Object.keys(elementType.elementClass.visTemplate).slice(0, elementClassArguments.length), elementClassArguments))),
-		elementType: elementType,
-		nestedGraph: {},
-		cachedTypedPropertiesValues: {[elementType.typeID]: propsVals},
-	};
-}
-GraphEditor.ElementClasses = CreateObjectFromProperties('classID', GraphEditor.CreateElementClass('node', {x: 0, y: 0}), GraphEditor.CreateElementClass('edge', {from: 0, to: 0})); //INFO: Now only two classes of elements ara available: nodes and edges. So they are hardcoded.
-GraphEditor.PropertyClasses = CreateObjectFromProperties('propertyClassID',
-	GraphEditor.CreatePropertyClass('text', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}" title="${elementProperty.propertyName}" contenteditable="true">${propertyValue}</div>`, $elementProperty => $elementProperty.text())
-);
-
-GraphEditor.CreateType_old = function (id, name, description, color, template, titles) {
-	return {
-		id: id,
-		template: template,
-		name: name,
-		color: color,
-		description: description,
-		titles: titles
-	};
-};
-GraphEditor.CreateStyles_old = function (...types) {
-	let styles = {};
-	// TODO Тоже более красиво хочется преобразовать в словарь...
-	for (let t in types) {
-		styles[types[t].id] = types[t];
-	}
-	return styles
-};
 GraphEditor.GenerateID = function () {
 	let id = [];
 	for (let i = 0; i < 40; i++) id.push((Math.random() * 16 | 0).toString(16));
@@ -1226,8 +980,6 @@ GraphEditor.GenerateID = function () {
 }
 
 
-//BUG #1: spawned two copies of editor for each node.
-//TODO #2: default value is not shown when select because it is set to whole array. Add bindings or adapters.
 //BUG #3: all ids must be string.
 
 
@@ -1325,12 +1077,12 @@ function DataGraph(graphEditor) {
 
 	let onChangeElement = CreateNestedEvent('onChangeElement', false, scope.graphEditor.onUpdateElement, scope.graphEditor.onRemoveElement);
 	onChangeElement.Subscribe(function (element) {
-		if (callbacks.hasOwnProperty(element.elementTypeID)) Incoming(() => Callback(element, 'processorConfigHandler'));
+		if (callbacks.hasOwnProperty(element.elementTypeID)) Schedule(() => Callback(element, 'processorConfigHandler'));
 		else if (scope.graphEditor.GetElementType(element.elementTypeID).elementClassID === 'edge') {
 			let toElement = scope.graphEditor.GetElement(element.visTemplate.to);
-			if (toElement && callbacks.hasOwnProperty(toElement.elementTypeID)) Incoming(() => Callback(toElement, 'processorInputHandler'));
+			if (toElement && callbacks.hasOwnProperty(toElement.elementTypeID)) Schedule(() => Callback(toElement, 'processorInputHandler'));
 			let fromElement = scope.graphEditor.GetElement(element.visTemplate.from);
-			if (fromElement && callbacks.hasOwnProperty(fromElement.elementTypeID)) Incoming(() => Callback(fromElement, 'processorOutputHandler'));
+			if (fromElement && callbacks.hasOwnProperty(fromElement.elementTypeID)) Schedule(() => Callback(fromElement, 'processorOutputHandler'));
 		}
 		return element;
 	});
