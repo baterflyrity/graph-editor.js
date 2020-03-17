@@ -49870,4 +49870,3 @@
 	Object.defineProperty(exports, '__esModule', { value: true });
 
 })));
-//# sourceMappingURL=vis-network.js.map

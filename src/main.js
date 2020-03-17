@@ -698,7 +698,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				},
 				locale: 'ru',
 				physics: {
-					enabled: false,
+					enabled: true,
 					stabilization: {
 						fit: false
 					}
