@@ -579,34 +579,34 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 
 
 	};
-	scope.data = {
-		[GraphEditor.ElementClasses.node.classID]: new vis.DataSet(nodesData),
-		[GraphEditor.ElementClasses.edge.classID]: new vis.DataSet(edgesData),
-	};
-	scope.types = {
-		[GraphEditor.ElementClasses.node.classID]: nodeStyles ? nodeStyles : GraphEditor.CreateStyles_old(
-			GraphEditor.CreateType_old('0', 'Эллипс', 'Синие эллипсы', 'blue', {
-				color: '#8dd0f8',
-				shape: 'ellipse'
-			}),
-			GraphEditor.CreateType_old('1', 'Прямоугольник', 'Зелёные прямоугольники', 'green', {
-				color: '#82ec93',
-				shape: 'box'
-			})
-		),
-		[GraphEditor.ElementClasses.edge.classID]: edgeStyles ? edgeStyles : GraphEditor.CreateStyles_old(
-			GraphEditor.CreateType_old('0', 'Сплошное', 'Без штриховки', 'hidden', {
-				arrows: 'to',
-				dashes: false,
-				color: {inherit: 'both'}
-			}),
-			GraphEditor.CreateType_old('1', 'Штрихованное', 'Равномерная штриховка', 'hidden', {
-				arrows: 'to',
-				dashes: true,
-				color: {inherit: 'both'}
-			})
-		),
-	};
+	// scope.data = {
+	// 	[GraphEditor.ElementClasses.node.classID]: new vis.DataSet(nodesData),
+	// 	[GraphEditor.ElementClasses.edge.classID]: new vis.DataSet(edgesData),
+	// };
+	// scope.types = {
+	// 	[GraphEditor.ElementClasses.node.classID]: nodeStyles ? nodeStyles : GraphEditor.CreateStyles_old(
+	// 		GraphEditor.CreateType_old('0', 'Эллипс', 'Синие эллипсы', 'blue', {
+	// 			color: '#8dd0f8',
+	// 			shape: 'ellipse'
+	// 		}),
+	// 		GraphEditor.CreateType_old('1', 'Прямоугольник', 'Зелёные прямоугольники', 'green', {
+	// 			color: '#82ec93',
+	// 			shape: 'box'
+	// 		})
+	// 	),
+	// 	[GraphEditor.ElementClasses.edge.classID]: edgeStyles ? edgeStyles : GraphEditor.CreateStyles_old(
+	// 		GraphEditor.CreateType_old('0', 'Сплошное', 'Без штриховки', 'hidden', {
+	// 			arrows: 'to',
+	// 			dashes: false,
+	// 			color: {inherit: 'both'}
+	// 		}),
+	// 		GraphEditor.CreateType_old('1', 'Штрихованное', 'Равномерная штриховка', 'hidden', {
+	// 			arrows: 'to',
+	// 			dashes: true,
+	// 			color: {inherit: 'both'}
+	// 		})
+	// 	),
+	// };
 
 	scope.container.html('<div class="graph-editor"></div>');
 
