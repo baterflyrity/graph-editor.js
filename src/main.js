@@ -1,6 +1,5 @@
 //Last release: 1.1
 function GraphEditor(container, hierarchical = true, editable = true) {
-	//TODO: убрать старые куски кода.
 
 	/**
 	 * Check own property existence. In case object does not contain such property and default value defined assignes that property to object and also returns true.
@@ -57,7 +56,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		return visEdge
 	}
 
-	//TODO add validation for all object's properties/IDs existence and MAYBE throw exceptions.
+	//TODO add validation for all object's properties existence and MAYBE throw exceptions.
 	function ValidateElementType(rawElementTypeOrElementType) {
 		let otherClasses = rawElementTypeOrElementType.typeStylesIDsArray.map(styleID => scope.GetElementStyle(styleID)).filter(style => !!style && style.elementClassID !== rawElementTypeOrElementType.elementClassID);
 		if (otherClasses.length)
@@ -360,7 +359,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		elementClasses: {},
 		SetElementClass: function (classID, visTemplate, triggerEvents = true) {
 			let elemtnClass = {
-				classID: classID,
+				classID: ValidateID(classID),
 				visTemplate: visTemplate
 			};
 			let event = !scope.GetElementClass(elemtnClass.classID) ? scope.onCreateElementClass : scope.onSetElementClass;
@@ -385,7 +384,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		propertyClasses: {},
 		SetPropertyClass: function (propertyClassID, propertyConstructor, propertyParser, triggerEvents = true) {
 			let propertyClass = {
-				propertyClassID: propertyClassID,
+				propertyClassID: ValidateID(propertyClassID),
 				propertyConstructor: propertyConstructor,
 				propertyParser: propertyParser,
 			};
@@ -411,7 +410,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		elementStyles: {},
 		SetElementStyle: function (styleID, elementClassID, visTemplate, triggerEvents = true) {
 			let elementStyle = {
-				styleID: styleID,
+				styleID: ValidateID(styleID),
 				elementClassID: elementClassID,
 				visTemplate: visTemplate,
 			};
@@ -437,7 +436,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		elementProperties: {},
 		SetElementProperty: function (propertyID, propertyClassID, propertyName, propertyDefaultValue, propertyOptions, triggerEvents = true) {
 			let elementProperty = {
-				propertyID: propertyID,
+				propertyID: ValidateID(propertyID),
 				propertyClassID: propertyClassID,
 				propertyName: propertyName,
 				propertyDefaultValue: propertyDefaultValue,
@@ -465,7 +464,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		elementTypes: {},
 		SetElementType: function (typeID, elementClassID, typeName, typeDescription, typeColor, typePropertiesIDsArray, typeStylesIDsArray, triggerEvents = true) {
 			let elementType = {
-				typeID: typeID,
+				typeID: ValidateID(typeID),
 				elementClassID: elementClassID,
 				typeName: typeName,
 				typeDescription: typeDescription,
@@ -478,7 +477,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			elementType = ValidateElementType(elementType);
 			elementType.visTemplate = Object.assign({}, scope.GetElementClass(elementType.elementClassID).visTemplate, ...elementType.typeStylesIDsArray.map(styleID => scope.GetElementStyle(styleID)).filter(style => !!style).map(style => style.visTemplate));
 			elementType.propertiesValues = Object.fromEntries(elementType.typePropertiesIDsArray.map(propertyID => scope.GetElementProperty(propertyID)).filter(property => !!property).map(property => [property.propertyID, property.propertyDefaultValue]));
-			// elementType.propertiesValues = Object.fromEntries(elementType.typePropertiesIDsArray.map(propertyID => scope.GetElementProperty(propertyID)).filter(property => !!property).map(property => [property.propertyID, SelectPropertyDefaultValue(property.propertyDefaultValue)])); //TODO: make sure no specifiec default value selector required.
 			let event = !scope.GetElementType(elementType.typeID) ? scope.onCreateElementType : scope.onSetElementType;
 			elementType = triggerEvents ? event.Trigger(elementType) : elementType;
 			scope.elementTypes[elementType.typeID] = ValidateElementType(elementType);
@@ -503,7 +501,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		elements: {},
 		SetElement: function (elementID, elementTypeID, elementPropertiesValues = {}, elementClassArguments = {}, nestedGraph = {}, cachedTypedPropertiesValues = undefined, triggerEvents = true) {
 			let element = {
-				elementID: elementID,
+				elementID: ValidateID(elementID),
 				elementTypeID: elementTypeID,
 				elementPropertiesValues: elementPropertiesValues,
 				elementClassArguments: elementClassArguments,
@@ -852,7 +850,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		a.href = URL.createObjectURL(file);
 		a.download = fileName;
 		a.click();
-		//TODO: remove this <a>
 	}
 
 	let $modal = BuildModal();
@@ -972,15 +969,16 @@ function CreateNestedEvent(eventName, eventDescription = undefined, ...parentEve
 	return e;
 }
 
+function ValidateID(id) {
+	return '' + id;
+}
+
 
 GraphEditor.GenerateID = function () {
 	let id = [];
 	for (let i = 0; i < 40; i++) id.push((Math.random() * 16 | 0).toString(16));
 	return id.join('');
 }
-
-
-//BUG #3: all ids must be string.
 
 
 //-----------------------------------------------------------------------------------

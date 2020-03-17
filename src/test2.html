@@ -25,7 +25,7 @@
 		//Create graph in container 'body'.
 		ge = GraphEditor('body', true, true);
 		ge.engine.onCreateNode.Subscribe(e => {
-			Schedule(()=>{
+			Schedule(() => {
 				console.log('creating', ge.GetElement(e.id));
 			});
 			return e;
@@ -57,7 +57,7 @@
 			return processorData;
 		}
 
-		dg.SetProcessorType('columnSelector', 'Колонка', 'Выбирает колонку из датафрейма', 'hidden', {'Колонка': ['customSelect', ['*']], 'label': ['hiddenLabel', 'column selector']}, ['defaultNode'], UpdateOutputsOnChangeOrOutput, function (processorData, processorElement, inputs, outputs) {
+		dg.SetProcessorType('columnSelector', 'Колонка', 'Выбирает колонку из датафрейма', 'hidden', {'Колонка': ['customSelect', {value: '0', options: ['*']}], 'label': ['hiddenLabel', 'column selector']}, ['defaultNode'], UpdateOutputsOnChangeOrOutput, function (processorData, processorElement, inputs, outputs) {
 			//Processor's parameters changed (processor - element of this type).
 			//Set options as sliced value of first input data.
 			processorData.parameters['Колонка'] = processorData.inputs.length && processorData.inputs[0] ? processorData.inputs[0].split('') : ['*']; //values can be undefined
