@@ -6,14 +6,31 @@ const cleanCSS = require('gulp-clean-css');
 const order = require("gulp-order");
 const print = require('gulp-print').default;
 const rename = require("gulp-rename");
+const shell = require('gulp-shell');
+const execa = require('execa');
+const argv = require('yargs').argv;
 
 
+async function FomanticTasksCLI() {
+	const {stdout} = await execa('gulp', ['--tasks-simple'], {cwd: './src/vendor/fomantic-ui'});
+	let tasks = stdout.split('\n').map(x => x.trim());
+	let args = Object.getOwnPropertyNames(argv).filter(x => x.match(/^\w.*$/) && tasks.indexOf(x) !== -1);
+	if (args.length) return FomanticTask(args[0])();
+	else console.log(`Pass argument like --<task name> to execute Fomantic-UI tasks.\r\nAvailable Fomantic-UI tasks: ${tasks.join(', ')}.`);
+}
 
+function FomanticTask(name) {
+	return async cb => {
+		console.log(`Starting fomantic-UI '${name}'...`);
+		return execa('gulp', [name], {cwd: './src/vendor/fomantic-ui'});
+	};
+}
+
+exports.fomantic = FomanticTasksCLI;
 
 
 function javascript(cb) {
-	return src(['src/vendor/jquery*.js', 'src/vendor/**/*.js', 'src/**/*.js'])
-		// .pipe(print(filepath => `js after: ${filepath}`))
+	return src(['./src/vendor/jquery*.min.js', './src/vendor/vis-network.patched.js', './src/vendor/fomantic-ui/dist/**/*.min.js', './src/*.js'])
 		.pipe(terser({
 			output: {
 				comments: false
@@ -24,13 +41,7 @@ function javascript(cb) {
 }
 
 function css(cb) {
-	return src(['src/vendor/**/*.css', 'src/**/*.css'])
-		// .pipe(print(filepath => `css before: ${filepath}`))
-		// .pipe(order([
-		// 	"src/vendor/**/*.css",
-		// 	"src/**/*.css"
-		// ], {base: './'}))
-		// .pipe(print(filepath => `css after: ${filepath}`))
+	return src(['./src/vendor/fomantic-ui/dist/*.min.css', './src/vendor/fomantic-ui/dist/components/*.min.css', './src/vendor/fomantic-ui/dist/themes/default/*.min.css', './src/*.css'])
 		.pipe(cleanCSS({
 			1: {
 				all: true,
@@ -45,9 +56,9 @@ function css(cb) {
 }
 
 function otherFiles(cb) {
-	return src(['src/vendor/semantic-ui/**/*.*', '!src/vendor/semantic-ui/**/*.js', '!src/vendor/semantic-ui/**/*.css'])
+	return src('./src/vendor/fomantic-ui/dist/themes/default/**/*.*')
 		.pipe(rename(function (path) {
-			path.dirname = "./";
+			path.dirname = 'themes\\default\\' + path.dirname;
 		}))
 		.pipe(dest('dist/'));
 }
@@ -57,6 +68,9 @@ function clean(cb) {
 }
 
 exports.default = series(clean, parallel(javascript, css, otherFiles));
+exports.js = javascript;
+exports.css = css;
+exports.assets = otherFiles;
 
 
 
