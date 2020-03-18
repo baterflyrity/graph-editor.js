@@ -110,7 +110,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			let attributes = [];
 			if (searchable && (!autosearchable || options.length > 5)) attributes.push('search');
 			if (multiple) attributes.push('multiple');
-			let optionsHTML = options.map(option => `<div class="item" data-value="${option.value}" data-text='${option.shortContent}'>${option.longContent}</div>`);
+			let optionsHTML = options.map(option => `<div class="ui dividing header">header</div><div class="item" data-value="${option.value}" data-text='${option.shortContent}'>${option.longContent}</div>`);
 			let $dom = jQuery(`<div><label>${label}: </label>
 <div class="property ui fluid inline selection ${attributes.join(' ')} dropdown">
 	<input type="hidden" value="">
@@ -120,7 +120,9 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 </div>
 </div>`);
 			Schedule(() => {
-				$dropdown = $dom.find('.property.dropdown').dropdown();
+				$dropdown = $dom.find('.property.dropdown').dropdown({
+					hideDividers: true
+				});
 				if (multiple) defaultValue.forEach(val => $dropdown.dropdown('set selected', val));
 				else $dropdown.dropdown('set selected', defaultValue);
 			});
