@@ -79,6 +79,15 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 	}
 
 
+	function GroupArray(array, keySelector = x => x, resultSelector = x => x) {
+		let groups = array.map(keySelector).filter((value, index, self) => self.indexOf(value) === index);
+		return groups.map(g => ({
+			group: g,
+			items: array.filter((...args) => keySelector(...args) === g).map(resultSelector)
+		}));
+	}
+
+
 	function CreateDefaults() {
 		//Element classes
 		scope.SetElementClass('node', {x: 0, y: 0});
@@ -96,32 +105,50 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 
 		function ConstructDropdown(label, options, defaultValue, multiple = false, searchable = true, autosearchable = true) {
 			options = options.constructor !== Array ? Object.entries(options) : options.map((option, index) => [index, option]);
+			if (!options.length) throw `No options available for dropdown ${label}.`;
 			options = options.map(([optionValue, option]) => {
-				if (typeof (option) !== 'string')
-					return Object.assign({value: optionValue}, option);
-				return {
+				let opt = {
 					value: '' + optionValue,
 					shortContent: '' + option,
 					longContent: '' + option,
+					group: 'default',
 				};
+				if (typeof (option) !== 'string')
+					Object.assign(opt, option);
+				return opt;
 			});
-			if (!options.length) throw `No options available for dropdown ${label}.`;
 			if (!defaultValue) defaultValue = multiple ? [options[0].value] : options[0].value;
 			let attributes = [];
 			if (searchable && (!autosearchable || options.length > 5)) attributes.push('search');
 			if (multiple) attributes.push('multiple');
-			let optionsHTML = options.map(option => `<div class="ui dividing header">header</div><div class="item" data-value="${option.value}" data-text='${option.shortContent}'>${option.longContent}</div>`);
+			let groups = GroupArray(options, option => option.group);
+			let optionsHTML = groups.map(g =>
+				(groups.length !== 1 ? `<div class="ui dividing header">${g.group}</div>` : '') +
+				g.items.map(option => `<div class="item" data-value="${option.value}" data-text='${option.shortContent}'>${option.longContent}</div>`).join('')
+			).join('');
+			// let optionsHTML = options.map(option => `<div class="ui dividing header">header</div><div class="item" data-value="${option.value}" data-text='${option.shortContent}'>${option.longContent}</div>`);
 			let $dom = jQuery(`<div><label>${label}: </label>
 <div class="property ui fluid inline selection ${attributes.join(' ')} dropdown">
 	<input type="hidden" value="">
 	<i class="dropdown icon"></i>
 	<div class="default text"></div>	
-	<div class="menu">${optionsHTML.join('')}</div>
+	<div class="menu">${optionsHTML}</div>
 </div>
 </div>`);
 			Schedule(() => {
-				$dropdown = $dom.find('.property.dropdown').dropdown({
-					hideDividers: true
+				$dropdown = $dom.find('.property.dropdown');
+				$dropdown.find('.menu>.header').show();
+				$dropdown.dropdown({
+					hideDividers: 'empty',
+					fullTextSearch: true,
+					// TODO: see issue #13
+					// onChange: function (value, text, $choice) {
+					// 	$dropdown.find('.menu>.header').each(function (i, e) {
+					// 		$e = $(e);
+					// 		if ($e.nextUntil('.header', '.item').not('.filtered').length) $e.show();
+					// 		else $e.hide();
+					// 	});
+					// },
 				});
 				if (multiple) defaultValue.forEach(val => $dropdown.dropdown('set selected', val));
 				else $dropdown.dropdown('set selected', defaultValue);
