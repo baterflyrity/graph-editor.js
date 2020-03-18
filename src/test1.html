@@ -54,7 +54,28 @@
 				let d = ge.GetElement('d');
 				//Node d has customTitle property, so it's value defines it's options.
 				d.elementPropertiesValues.customTitle = {
-					options: [1, 2, 3].map(i => element.elementPropertiesValues.title + " " + i),//Selected in node c option plus 1, 2 or 3 number. Number 1 will be preselected.
+					options: {
+						value1: {
+							longContent: element.elementPropertiesValues.title + ' 1',
+							shortContent: element.elementPropertiesValues.title[0] + '1',
+							group: 'Из узла C'
+						},
+						value2: {
+							longContent: element.elementPropertiesValues.title + ' 2',
+							shortContent: element.elementPropertiesValues.title[0] + '2',
+							group: 'Из узла C'
+						},
+						value3: {
+							longContent: element.elementPropertiesValues.title + ' 3',
+							shortContent: element.elementPropertiesValues.title[0] + '3',
+							group: 'Из узла C'
+						},
+						messy: {
+							longContent: 'Длинный текст',
+							shortContent: 'Короткий текст',
+							group: 'Лишнее'
+						},
+					},
 					value: false, //Any non-true value treated as first option. If no options, '' value is used.
 				};
 				//Update node d. Sorry, no special method now, use constructor.
