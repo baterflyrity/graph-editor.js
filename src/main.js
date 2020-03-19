@@ -109,12 +109,22 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			options = options.map(([optionValue, option]) => {
 				let opt = {
 					value: '' + optionValue,
-					shortContent: '' + option,
-					longContent: '' + option,
+					content: {
+						short: '' + option,
+						long: '' + option,
+					},
 					group: 'default',
 				};
-				if (typeof (option) !== 'string')
-					Object.assign(opt, option);
+				if (typeof (option) !== 'string') {
+					if (option.group) opt.group = option.group;
+					if (option.content) {
+						if (typeof (option.content) === 'string') opt.content = {
+							short: option.content,
+							long: option.content,
+						};
+						else opt.content = option.content;
+					}
+				}
 				return opt;
 			});
 			if (!defaultValue) defaultValue = multiple ? [options[0].value] : options[0].value;
@@ -124,7 +134,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			let groups = GroupArray(options, option => option.group);
 			let optionsHTML = groups.map(g =>
 				(groups.length !== 1 ? `<div class="ui dividing header">${g.group}</div>` : '') +
-				g.items.map(option => `<div class="item" data-value="${option.value}" data-text='${option.shortContent}'>${option.longContent}</div>`).join('')
+				g.items.map(option => `<div class="item" data-value="${option.value}" data-text='${option.content.short}'>${option.content.long}</div>`).join('')
 			).join('');
 			// let optionsHTML = options.map(option => `<div class="ui dividing header">header</div><div class="item" data-value="${option.value}" data-text='${option.shortContent}'>${option.longContent}</div>`);
 			let $dom = jQuery(`<div><label>${label}: </label>

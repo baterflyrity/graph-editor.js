@@ -29,7 +29,7 @@
 		ge.SetElementStyle('redNode', 'node', Object.assign({}, ge.GetElementStyle('defaultNode'), {color: 'red'}));
 		//Create editable property from predefined class.
 		ge.SetElementProperty('title', 'select', 'Пример select', 'stav', {course: 'Курс', stav: 'Став', volume: 'Объем', cost: 'Цена', vol1: 'Объем 1'});
-		ge.SetElementProperty('customTitle', 'customMultiSelect', 'Пример customMultiSelect', {value:false,options: ['a', 'b', 'c']});
+		ge.SetElementProperty('customTitle', 'customMultiSelect', 'Пример customMultiSelect', {value: false, options: ['a', 'b', 'c']});
 		//Create node type with defined style and property. It has no label, so no binding would automatically happen.
 		ge.SetElementType('titledNode', 'node', 'Признак', 'Выбираемое название', 'green', ['title'], ['greenNode']);
 		//This node type will have dynamic select, defined by element value as array of strings.
@@ -56,25 +56,20 @@
 				d.elementPropertiesValues.customTitle = {
 					options: {
 						value1: {
-							longContent: element.elementPropertiesValues.title + ' 1',
-							shortContent: element.elementPropertiesValues.title[0] + '1',
+							content: {
+								short: element.elementPropertiesValues.title[0] + '1',
+								long: element.elementPropertiesValues.title + ' 1',
+							},
 							group: 'Из узла C'
 						},
 						value2: {
-							longContent: element.elementPropertiesValues.title + ' 2',
-							shortContent: element.elementPropertiesValues.title[0] + '2',
+							content: element.elementPropertiesValues.title + ' 2',
 							group: 'Из узла C'
 						},
-						value3: {
-							longContent: element.elementPropertiesValues.title + ' 3',
-							shortContent: element.elementPropertiesValues.title[0] + '3',
-							group: 'Из узла C'
-						},
-						messy: {
-							longContent: 'Длинный текст',
-							shortContent: 'Короткий текст',
-							group: 'Лишнее'
-						},
+						messy1: 'Лишний текст 1',
+						messy2: 'Лишний текст 2',
+						messy3: 'Лишний текст 3',
+						messy4: '<i class="ui help inline red icon"> Лишняя html иконка</i>',
 					},
 					value: false, //Any non-true value treated as first option. If no options, '' value is used.
 				};
