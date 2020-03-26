@@ -3,7 +3,6 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Graph editor example</title>
-	<script type="text/javascript" src="vendor/jquery-3.4.1.min.js"></script>
 	<link rel="stylesheet" type="text/css" href="../dist/bundle.min.css">
 	<script type="text/javascript" src="../dist/bundle.min.js"></script>
 </head>
@@ -44,7 +43,23 @@
 				let d = ge.GetElement('d');
 				//Node d has customTitle property, so it's value defines it's options.
 				d.elementPropertiesValues.customTitle = {
-					options: [1, 2, 3].map(i => element.elementPropertiesValues.title + " " + i),//Selected in node c option plus 1, 2 or 3 number. Number 1 will be preselected.
+					options: {
+						value1: {
+							content: {
+								short: element.elementPropertiesValues.title[0] + '1',
+								long: element.elementPropertiesValues.title + ' 1',
+							},
+							group: 'Из узла C'
+						},
+						value2: {
+							content: element.elementPropertiesValues.title + ' 2',
+							group: 'Из узла C'
+						},
+						messy1: 'Лишний текст 1',
+						messy2: 'Лишний текст 2',
+						messy3: 'Лишний текст 3',
+						messy4: '<i class="ui help inline red icon"> Лишняя html иконка</i>',
+					},
 					value: false, //Any non-true value treated as first option. If no options, '' value is used.
 				};
 				//Update node d. Sorry, no special method now, use constructor.

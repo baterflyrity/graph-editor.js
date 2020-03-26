@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "del": "^5.1.0",
+    "execa": "latest",
     "fomantic-ui": "^2.8.4",
     "gulp": "latest",
     "gulp-clean-css": "^4.3.0",
@@ -10,7 +11,8 @@
     "gulp-rename": "latest",
     "gulp-shell": "^0.8.0",
     "gulp-terser": "latest",
-    "yargs": "latest",
-    "execa": "latest"
+    "jquery": "^3.4.1",
+    "vis-network": "^7.4.0",
+    "yargs": "latest"
   }
 }
