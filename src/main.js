@@ -58,15 +58,18 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 
 	//TODO add validation for all object's properties existence and MAYBE throw exceptions.
 	function ValidateElementType(rawElementTypeOrElementType) {
+		let nullClasses = rawElementTypeOrElementType.typeStylesIDsArray.filter(styleID => scope.GetElementStyle(styleID) === null);
+		if (nullClasses.length)
+			throw `Element type ${rawElementTypeOrElementType.typeName} of element class ${rawElementTypeOrElementType.elementClassID} inherits nonexistent style(s) ${nullClasses.join(', ')}.`;
 		let otherClasses = rawElementTypeOrElementType.typeStylesIDsArray.map(styleID => scope.GetElementStyle(styleID)).filter(style => !!style && style.elementClassID !== rawElementTypeOrElementType.elementClassID);
 		if (otherClasses.length)
-			throw `Can not create type ${rawElementTypeOrElementType.typeName} of element class ${rawElementTypeOrElementType.elementClassID} with style(s) ${otherClasses.map(style => style.styleID + ' (of class ' + style.elementClassID + ')').join(', ')}.`;
+			throw `Element type ${rawElementTypeOrElementType.typeName} of element class ${rawElementTypeOrElementType.elementClassID} inherits other class style(s) ${otherClasses.map(style => style.styleID + ' (of class ' + style.elementClassID + ')').join(', ')}.`;
 		return rawElementTypeOrElementType;
 	}
 
 	function ValidateElement(rawElementOrElement) {
 		if (!scope.GetElementType(rawElementOrElement.elementTypeID))
-			throw `Can not create element of type ${rawElementOrElement.elementTypeID}. Ensure this type was created.`;
+			throw `Element inherits nonexistent element type ${rawElementOrElement.elementTypeID}.`;
 		return rawElementOrElement;
 	}
 
