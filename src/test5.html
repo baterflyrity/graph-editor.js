@@ -83,6 +83,44 @@
 		//Now create node c and it will update node d.
 		ge.SetElement('c', 'titledNode', {title: 'stav'});
 
+		let block = false;
+
+		function reindexTheGraph() {
+			console.log('reindexTheGraph start');
+			ge.GetElement().forEach(x=>{
+				ge.SetElement(x.elementID,x.elementTypeID,x.elementPropertiesValues,x.elementClassArguments,{a:1},x.cachedTypedPropertiesValues,false);
+			});
+			console.log('reindexTheGraph end');
+		}
+
+		function saveGraph() {
+			console.log('saveGraph');
+		}
+
+		ge.engine.onCreateNode.Subscribe(e => {
+			if (!block) {
+				block = true;
+
+				reindexTheGraph();
+				saveGraph();
+
+				block = false;
+			}
+			return e;
+		});
+
+		ge.engine.onCreateEdge.Subscribe(e => {
+			if (!block) {
+				block = true;
+
+				reindexTheGraph();
+				saveGraph();
+
+				block = false;
+			}
+			return e;
+		});
+
 	});
 </script>
 </html>

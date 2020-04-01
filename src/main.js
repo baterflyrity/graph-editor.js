@@ -73,11 +73,36 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		return rawElementOrElement;
 	}
 
-	function SerializeFunction(foo) {
-		return foo.toString();
+	/**
+	 * Ensure that foo is pure so it can be serialized and then deserialized without references breaks. Returns serialized function.
+	 * @return {string}
+	 */
+	function ValidateSerializePropertyClassFunctionPurity(foo, ...args) {
+		let source = foo.toString();
+		let copy = new Function('return ' + source)();
+		try {
+			copy(...args);
+		} catch (e) {
+			if (e instanceof ReferenceError) throw `Can not serialize function ${foo.name} because of local reference ${e.message.split(' ')[0]} will be loosed.`;
+		}
+		return source;
 	}
 
-	function DeserializeFunction(foo) {
+	function MarshalFunction(foo) {
+		let source = foo.toString();
+		let re = /(\w+)(?:\s*\.\s*\w+)*\s*\(/gi;
+		let m;
+		let refs = [];
+		do {
+			m = re.exec(source);
+			if (m) refs.push(m[1]);
+		} while (m);
+		refs = refs.filter(x => x !== foo.name && !window[x]);
+		if (refs.length) throw `Can not serialize function ${foo.name} because of local reference(s) ${refs.join(", ")}. This references will be loosed.`;
+		return source;
+	}
+
+	function DemarshalFunction(foo) {
 		return new Function('return ' + foo)();
 	}
 
@@ -179,7 +204,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		}
 
 		function ConstructCustomMultiSelect(elementProperty, propertyValue, element) {
-			console.log(elementProperty, element);
 			return ConstructDropdown(elementProperty.propertyName, propertyValue.options, propertyValue.value, true);
 		}
 
@@ -331,8 +355,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			let data = (typeof (savedGraph) === 'undefined' ? scope.save() : savedGraph);
 			data.propertyClasses = data.propertyClasses.map(x => ({
 				propertyClassID: x.propertyClassID,
-				propertyConstructor: SerializeFunction(x.propertyConstructor),
-				propertyParser: SerializeFunction(x.propertyParser),
+				propertyConstructor: MarshalFunction(x.propertyConstructor),
+				propertyParser: MarshalFunction(x.propertyParser),
 			}));
 			return JSON.stringify(data);
 		},
@@ -340,8 +364,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			let data = JSON.parse(serializedGraph);
 			data.propertyClasses = data.propertyClasses.map(x => ({
 				propertyClassID: x.propertyClassID,
-				propertyConstructor: DeserializeFunction(x.propertyConstructor),
-				propertyParser: DeserializeFunction(x.propertyParser),
+				propertyConstructor: DemarshalFunction(x.propertyConstructor),
+				propertyParser: DemarshalFunction(x.propertyParser),
 			}));
 			return scope.load(data);
 		},
@@ -850,6 +874,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 							$modal.modal('hide');
 						} catch (e) {
 							ToggleError(false);
+							throw e;
 						}
 					};
 					reader.readAsText(currentFile);
