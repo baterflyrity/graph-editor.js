@@ -30,7 +30,7 @@
 		ge.SetElementStyle('redNode', 'node', Object.assign({}, ge.GetElementStyle('defaultNode'), {color: 'red'}));
 		//Create editable property from predefined class.
 		ge.SetElementProperty('title', 'optionalSelect', 'Пример select', 'stav', {course: 'Курс', stav: 'Став', volume: 'Объем', cost: 'Цена', vol1: 'Объем 1'});
-		ge.SetElementProperty('customTitle', 'customMultiSelect', 'Пример customMultiSelect', {value: false, options: ['a', 'b', 'c']});
+		ge.SetElementProperty('customTitle', 'customMultiSelect', 'Пример customMultiSelect');
 		//Create node type with defined style and property. It has no label, so no binding would automatically happen.
 		ge.SetElementType('titledNode', 'node', 'Признак', 'Выбираемое название', 'green', ['title'], ['greenNode']);
 		//This node type will have dynamic select, defined by element value as array of strings.
@@ -39,10 +39,7 @@
 		ge.SetElement('a', 'defaultNode');
 		ge.SetElement('b', 'defaultNode', {label: 'Узел2'});
 		ge.SetElement('d', 'customTitledNode', {
-			label: 'dynamic', customTitle: {
-				value: ['1', '6'],
-				options: ['item 0', 'item 1', 'item 2', 'item 3', 'item 4', 'item 5', 'item 6', 'item 7', 'item 8', 'item 9']
-			}
+			label: 'dynamic'
 		});
 		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'a', to: 'b'});
 		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'a', to: 'c'});

@@ -132,8 +132,12 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		}
 
 		function ConstructDropdown(label, options, defaultValue, multiple = false, optional = false, searchable = true, autosearchable = true) {
-			options = options.constructor !== Array ? Object.entries(options) : options.map((option, index) => [index, option]);
-			if (!options.length) throw `No options available for dropdown ${label}.`;
+			if (options)
+				options = options.constructor !== Array ? Object.entries(options) : options.map((option, index) => [index, option]);
+			if (!options || !options.length) {
+				if (!multiple && !optional) throw `No options available for dropdown ${label}.`;
+				options = [['', 'Не выбрано']];
+			}
 			options = options.map(([optionValue, option]) => {
 				let opt = {
 					value: '' + optionValue,
@@ -204,7 +208,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		}
 
 		function ConstructCustomMultiSelect(elementProperty, propertyValue, element) {
-			return ConstructDropdown(elementProperty.propertyName, propertyValue.options, propertyValue.value, true);
+			return ConstructDropdown(elementProperty.propertyName, propertyValue?propertyValue.options:false, propertyValue?propertyValue.value:false, true);
 		}
 
 		function ParseCustomSelect($propertyDOM, elementProperty, element) {
@@ -213,11 +217,11 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		}
 
 		function ConstructCustomSelect(elementProperty, propertyValue, element) {
-			return ConstructDropdown(elementProperty.propertyName, propertyValue.options, propertyValue.value);
+			return ConstructDropdown(elementProperty.propertyName, propertyValue?propertyValue.options:false, propertyValue? propertyValue.value:false);
 		}
 
 		function ConstructCustomOptionalSelect(elementProperty, propertyValue, element) {
-			return ConstructDropdown(elementProperty.propertyName, propertyValue.options, propertyValue.value, false, true);
+			return ConstructDropdown(elementProperty.propertyName, propertyValue?propertyValue.options:false, propertyValue? propertyValue.value:false, false, true);
 		}
 
 		function ConstructMultiSelect(elementProperty, propertyValue, element) {
