@@ -131,7 +131,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			return $propertyDOM.find('[contenteditable]').text();
 		}
 
-		function ConstructDropdown(label, options, defaultValue, multiple = false, searchable = true, autosearchable = true) {
+		function ConstructDropdown(label, options, defaultValue, multiple = false, optional = false, searchable = true, autosearchable = true) {
 			options = options.constructor !== Array ? Object.entries(options) : options.map((option, index) => [index, option]);
 			if (!options.length) throw `No options available for dropdown ${label}.`;
 			options = options.map(([optionValue, option]) => {
@@ -166,7 +166,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			).join('');
 			// let optionsHTML = options.map(option => `<div class="ui dividing header">header</div><div class="item" data-value="${option.value}" data-text='${option.shortContent}'>${option.longContent}</div>`);
 			let $dom = jQuery(`<div><label>${label}: </label>
-<div class="property ui fluid inline selection ${attributes.join(' ')} dropdown">
+<div class="property ui fluid inline selection ${attributes.join(' ')} ${optional ? 'clearable' : ''} dropdown">
 	<input type="hidden" value="">
 	<i class="dropdown icon"></i>
 	<div class="default text"></div>	
@@ -216,6 +216,10 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			return ConstructDropdown(elementProperty.propertyName, propertyValue.options, propertyValue.value);
 		}
 
+		function ConstructCustomOptionalSelect(elementProperty, propertyValue, element) {
+			return ConstructDropdown(elementProperty.propertyName, propertyValue.options, propertyValue.value, false, true);
+		}
+
 		function ConstructMultiSelect(elementProperty, propertyValue, element) {
 			return ConstructDropdown(elementProperty.propertyName, elementProperty.propertyOptions, propertyValue, true);
 		}
@@ -224,10 +228,16 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			return ConstructDropdown(elementProperty.propertyName, elementProperty.propertyOptions, propertyValue);
 		}
 
+		function ConstructOptionalSelect(elementProperty, propertyValue, element) {
+			return ConstructDropdown(elementProperty.propertyName, elementProperty.propertyOptions, propertyValue, false, true);
+		}
+
 		scope.SetPropertyClass('text', ConstructText, ParseText);
 		scope.SetPropertyClass('select', ConstructSelect, ParseDropdown);
+		scope.SetPropertyClass('optionalSelect', ConstructOptionalSelect, ParseDropdown);
 		scope.SetPropertyClass('multiSelect', ConstructMultiSelect, ParseDropdown);
 		scope.SetPropertyClass('customSelect', ConstructCustomSelect, ParseCustomSelect);
+		scope.SetPropertyClass('customOptionalSelect', ConstructCustomOptionalSelect, ParseCustomSelect);
 		scope.SetPropertyClass('customMultiSelect', ConstructCustomMultiSelect, ParseCustomSelect);
 		scope.SetPropertyClass('hidden', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}" hidden>${propertyValue}</div>`, $propertyDOM => $propertyDOM.text());
 		scope.SetPropertyClass('hiddenLabel', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}" hidden>${propertyValue}</div>`, $propertyDOM => $propertyDOM.text());

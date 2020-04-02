@@ -29,7 +29,7 @@
 		ge.SetElementStyle('greenNode', 'node', Object.assign({}, ge.GetElementStyle('defaultNode'), {color: 'green'})); //Just copied defaultNode style and changed color.
 		ge.SetElementStyle('redNode', 'node', Object.assign({}, ge.GetElementStyle('defaultNode'), {color: 'red'}));
 		//Create editable property from predefined class.
-		ge.SetElementProperty('title', 'select', 'Пример select', 'stav', {course: 'Курс', stav: 'Став', volume: 'Объем', cost: 'Цена', vol1: 'Объем 1'});
+		ge.SetElementProperty('title', 'optionalSelect', 'Пример select', 'stav', {course: 'Курс', stav: 'Став', volume: 'Объем', cost: 'Цена', vol1: 'Объем 1'});
 		ge.SetElementProperty('customTitle', 'customMultiSelect', 'Пример customMultiSelect', {value: false, options: ['a', 'b', 'c']});
 		//Create node type with defined style and property. It has no label, so no binding would automatically happen.
 		ge.SetElementType('titledNode', 'node', 'Признак', 'Выбираемое название', 'green', ['title'], ['greenNode']);
