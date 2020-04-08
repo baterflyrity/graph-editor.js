@@ -1,0 +1,5 @@
+function SerializeFunction(foo) {
+
+}
+
+

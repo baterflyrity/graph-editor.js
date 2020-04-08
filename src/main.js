@@ -179,7 +179,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		}
 
 		function ConstructCustomMultiSelect(elementProperty, propertyValue, element) {
-			console.log(elementProperty, element);
 			return ConstructDropdown(elementProperty.propertyName, propertyValue.options, propertyValue.value, true);
 		}
 
@@ -860,6 +859,19 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		return $modal;
 	}
 
+	function Alert(text, title, type = 'error', position = 'top center') {
+		scope.container.toast({
+			title: title,
+			message: text,
+			position: position,
+			displayTime: 10000,
+			class: type,
+			className: {
+				toast: 'ui message'
+			},
+		});
+	}
+
 	/*
 	 item = {
 	 name: data-name_attribute,
@@ -916,7 +928,10 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		name: 'save',
 		label: 'Сохранить',
 		icon: 'save',
-		click: _ => scope.download()
+		click: _ => {
+			Alert('Свойства пользовательских классов будут недоступны.', 'Внимание');
+			scope.download();
+		}
 	}, {
 		name: 'load',
 		label: 'Загрузить',
