@@ -73,40 +73,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		return rawElementOrElement;
 	}
 
-	/**
-	 * Ensure that foo is pure so it can be serialized and then deserialized without references breaks. Returns serialized function.
-	 * @return {string}
-	 */
-	function ValidateSerializePropertyClassFunctionPurity(foo, ...args) {
-		let source = foo.toString();
-		let copy = new Function('return ' + source)();
-		try {
-			copy(...args);
-		} catch (e) {
-			if (e instanceof ReferenceError) throw `Can not serialize function ${foo.name} because of local reference ${e.message.split(' ')[0]} will be loosed.`;
-		}
-		return source;
-	}
-
-	function MarshalFunction(foo) {
-		let source = foo.toString();
-		let re = /(\w+)(?:\s*\.\s*\w+)*\s*\(/gi;
-		let m;
-		let refs = [];
-		do {
-			m = re.exec(source);
-			if (m) refs.push(m[1]);
-		} while (m);
-		refs = refs.filter(x => x !== foo.name && !window[x]);
-		if (refs.length) throw `Can not serialize function ${foo.name} because of local reference(s) ${refs.join(", ")}. This references will be loosed.`;
-		return source;
-	}
-
-	function DemarshalFunction(foo) {
-		return new Function('return ' + foo)();
-	}
-
-
 	function GroupArray(array, keySelector = x => x, resultSelector = x => x) {
 		let groups = array.map(keySelector).filter((value, index, self) => self.indexOf(value) === index);
 		return groups.map(g => ({
@@ -131,13 +97,9 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			return $propertyDOM.find('[contenteditable]').text();
 		}
 
-		function ConstructDropdown(label, options, defaultValue, multiple = false, optional = false, searchable = true, autosearchable = true) {
-			if (options)
-				options = options.constructor !== Array ? Object.entries(options) : options.map((option, index) => [index, option]);
-			if (!options || !options.length) {
-				if (!multiple && !optional) throw `No options available for dropdown ${label}.`;
-				options = [['', 'Не выбрано']];
-			}
+		function ConstructDropdown(label, options, defaultValue, multiple = false, searchable = true, autosearchable = true) {
+			options = options.constructor !== Array ? Object.entries(options) : options.map((option, index) => [index, option]);
+			if (!options.length) throw `No options available for dropdown ${label}.`;
 			options = options.map(([optionValue, option]) => {
 				let opt = {
 					value: '' + optionValue,
@@ -170,7 +132,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			).join('');
 			// let optionsHTML = options.map(option => `<div class="ui dividing header">header</div><div class="item" data-value="${option.value}" data-text='${option.shortContent}'>${option.longContent}</div>`);
 			let $dom = jQuery(`<div><label>${label}: </label>
-<div class="property ui fluid inline selection ${attributes.join(' ')} ${optional ? 'clearable' : ''} dropdown">
+<div class="property ui fluid inline selection ${attributes.join(' ')} dropdown">
 	<input type="hidden" value="">
 	<i class="dropdown icon"></i>
 	<div class="default text"></div>	
@@ -208,7 +170,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		}
 
 		function ConstructCustomMultiSelect(elementProperty, propertyValue, element) {
-			return ConstructDropdown(elementProperty.propertyName, propertyValue?propertyValue.options:false, propertyValue?propertyValue.value:false, true);
+			return ConstructDropdown(elementProperty.propertyName, propertyValue.options, propertyValue.value, true);
 		}
 
 		function ParseCustomSelect($propertyDOM, elementProperty, element) {
@@ -217,11 +179,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		}
 
 		function ConstructCustomSelect(elementProperty, propertyValue, element) {
-			return ConstructDropdown(elementProperty.propertyName, propertyValue?propertyValue.options:false, propertyValue? propertyValue.value:false);
-		}
-
-		function ConstructCustomOptionalSelect(elementProperty, propertyValue, element) {
-			return ConstructDropdown(elementProperty.propertyName, propertyValue?propertyValue.options:false, propertyValue? propertyValue.value:false, false, true);
+			return ConstructDropdown(elementProperty.propertyName, propertyValue.options, propertyValue.value);
 		}
 
 		function ConstructMultiSelect(elementProperty, propertyValue, element) {
@@ -232,16 +190,10 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			return ConstructDropdown(elementProperty.propertyName, elementProperty.propertyOptions, propertyValue);
 		}
 
-		function ConstructOptionalSelect(elementProperty, propertyValue, element) {
-			return ConstructDropdown(elementProperty.propertyName, elementProperty.propertyOptions, propertyValue, false, true);
-		}
-
 		scope.SetPropertyClass('text', ConstructText, ParseText);
 		scope.SetPropertyClass('select', ConstructSelect, ParseDropdown);
-		scope.SetPropertyClass('optionalSelect', ConstructOptionalSelect, ParseDropdown);
 		scope.SetPropertyClass('multiSelect', ConstructMultiSelect, ParseDropdown);
 		scope.SetPropertyClass('customSelect', ConstructCustomSelect, ParseCustomSelect);
-		scope.SetPropertyClass('customOptionalSelect', ConstructCustomOptionalSelect, ParseCustomSelect);
 		scope.SetPropertyClass('customMultiSelect', ConstructCustomMultiSelect, ParseCustomSelect);
 		scope.SetPropertyClass('hidden', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}" hidden>${propertyValue}</div>`, $propertyDOM => $propertyDOM.text());
 		scope.SetPropertyClass('hiddenLabel', (elementProperty, propertyValue) => `<div data-property="${elementProperty.propertyID}" hidden>${propertyValue}</div>`, $propertyDOM => $propertyDOM.text());
@@ -345,12 +297,28 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			scope.clear();
 			if (savedGraph.hasOwnProperty('elementClasses'))
 				savedGraph.elementClasses.forEach(x => scope.SetElementClass(x.classID, x.visTemplate));
-			if (savedGraph.hasOwnProperty('propertyClasses'))
-				savedGraph.propertyClasses.forEach(x => scope.SetPropertyClass(x.propertyClassID, x.propertyConstructor, x.propertyParser));
+			if (savedGraph.hasOwnProperty('propertyClasses')) {
+				let hasCustom = false;
+				savedGraph.propertyClasses.forEach(x => {
+					if (typeof (x) === 'string') {
+						let p = scope.GetPropertyClass(x);
+						if (p) {
+							x = p;
+						} else {
+							hasCustom = true;
+							let text = scope.GetPropertyClass('text');
+							text.propertyClassID = x;
+							x = text;
+						}
+					}
+					scope.SetPropertyClass(x.propertyClassID, x.propertyConstructor, x.propertyParser);
+				});
+				if (hasCustom) Alert('Свойства пользовательских классов будут недоступны.', 'Внимание');
+			}
 			if (savedGraph.hasOwnProperty('elementStyles'))
 				savedGraph.elementStyles.forEach(x => scope.SetElementStyle(x.styleID, x.elementClassID, x.visTemplate));
 			if (savedGraph.hasOwnProperty('elementProperties'))
-				savedGraph.elementProperties.forEach(x => scope.SetElementProperty(x.propertyID, x.propertyClassID, x.propertyName, x.propertyDefaultValue));
+				savedGraph.elementProperties.forEach(x => scope.SetElementProperty(x.propertyID, x.propertyClassID, x.propertyName, x.propertyDefaultValue, x.propertyOptions));
 			if (savedGraph.hasOwnProperty('elementTypes'))
 				savedGraph.elementTypes.forEach(x => scope.SetElementType(x.typeID, x.elementClassID, x.typeName, x.typeDescription, x.typeColor, x.typePropertiesIDsArray, x.typeStylesIDsArray));
 			if (savedGraph.hasOwnProperty('elements'))
@@ -364,23 +332,15 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			scope.GetElementStyle().forEach(x => scope.RemoveElementStyle(x));
 			scope.GetPropertyClass().forEach(x => scope.RemovePropertyClass(x));
 			scope.GetElementClass().forEach(x => scope.RemoveElementClass(x));
+			CreateDefaults();
 		},
 		serialize: (savedGraph = undefined) => {
 			let data = (typeof (savedGraph) === 'undefined' ? scope.save() : savedGraph);
-			data.propertyClasses = data.propertyClasses.map(x => ({
-				propertyClassID: x.propertyClassID,
-				propertyConstructor: MarshalFunction(x.propertyConstructor),
-				propertyParser: MarshalFunction(x.propertyParser),
-			}));
+			data.propertyClasses = data.propertyClasses.map(x => x.propertyClassID);
 			return JSON.stringify(data);
 		},
 		deserialize: serializedGraph => {
 			let data = JSON.parse(serializedGraph);
-			data.propertyClasses = data.propertyClasses.map(x => ({
-				propertyClassID: x.propertyClassID,
-				propertyConstructor: DemarshalFunction(x.propertyConstructor),
-				propertyParser: DemarshalFunction(x.propertyParser),
-			}));
 			return scope.load(data);
 		},
 		download: (serializedGraph = undefined) => {
@@ -888,7 +848,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 							$modal.modal('hide');
 						} catch (e) {
 							ToggleError(false);
-							throw e;
+							console.error(`Can not upload graph because: ${e}`);
 						}
 					};
 					reader.readAsText(currentFile);
@@ -897,6 +857,19 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			},
 		});
 		return $modal;
+	}
+
+	function Alert(text, title, type = 'error', position = 'top center') {
+		scope.container.toast({
+			title: title,
+			message: text,
+			position: position,
+			displayTime: 10000,
+			class: type,
+			className: {
+				toast: 'ui message'
+			},
+		});
 	}
 
 	/*
@@ -955,7 +928,10 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		name: 'save',
 		label: 'Сохранить',
 		icon: 'save',
-		click: _ => scope.download()
+		click: _ => {
+			Alert('Свойства пользовательских классов будут недоступны.', 'Внимание','warning');
+			scope.download();
+		}
 	}, {
 		name: 'load',
 		label: 'Загрузить',
