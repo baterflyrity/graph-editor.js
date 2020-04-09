@@ -1,4 +1,6 @@
 //Last release: 1.1
+import {Event} from "./EventSystem";
+
 function GraphEditor(container, hierarchical = true, editable = true) {
 
 	/**
@@ -366,8 +368,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 
 		engine: {
 			graph: {},
-			onStartEditing: CreateEvent('onStartEditing', '(elementClass(node|edge), visElement)->undefined', 'broadcast'),
-			onStopEditing: CreateEvent('onStopEditing', '(elementClass(node|edge), visElement)->undefined', 'broadcast'),
+			onStartEditing: Event('onStartEditing', '(elementClass(node|edge), visElement)->undefined', 'broadcast'),
+			onStopEditing: Event('onStopEditing', '(elementClass(node|edge), visElement)->undefined', 'broadcast'),
 
 			//region Nodes manipulation
 			nodes: new vis.DataSet(),
@@ -376,8 +378,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				if (!scope.engine.GetNode(visNode.id)) return scope.engine.nodes.add(ValidateVisNode(triggerEvents ? scope.engine.onCreateNode.Trigger(visNode) : visNode));
 				return scope.engine.nodes.update(ValidateVisNode(triggerEvents ? scope.engine.onSetNode.Trigger(visNode) : visNode));
 			},
-			onCreateNode: CreateEvent('onCreateNode', '(visNode)->visNode', 'pipe'),
-			onSetNode: CreateEvent('onSetNode', '(visNode)->visNode', 'pipe'),
+			onCreateNode: Event('onCreateNode', '(visNode)->visNode', 'pipe'),
+			onSetNode: Event('onSetNode', '(visNode)->visNode', 'pipe'),
 			GetNode: function (nodeID) {
 				UpdateNodesPositions();
 				// let node = scope.engine.nodes.get(nodeID);
@@ -391,7 +393,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				return scope.engine.nodes.get(nodeID);
 			},
 			RemoveNode: (visNodeOrNodeID, triggerEvents = true) => scope.engine.nodes.remove(triggerEvents ? scope.engine.onRemoveNode.Trigger(visNodeOrNodeID) : visNodeOrNodeID),
-			onRemoveNode: CreateEvent('onRemoveNode', '(visNodeOrNodeID)->visNodeOrNodeID', 'pipe'),
+			onRemoveNode: Event('onRemoveNode', '(visNodeOrNodeID)->visNodeOrNodeID', 'pipe'),
 			//endregion
 
 			//region Edges manipulation
@@ -401,11 +403,11 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				if (!scope.engine.GetEdge(visEdge.id)) return scope.engine.edges.add(ValidateVisEdge(triggerEvents ? scope.engine.onCreateEdge.Trigger(visEdge) : visEdge));
 				return scope.engine.edges.update(ValidateVisEdge(triggerEvents ? scope.engine.onSetEdge.Trigger(visEdge) : visEdge));
 			},
-			onCreateEdge: CreateEvent('onCreateEdge', '(visEdge)->visEdge', 'pipe'),
-			onSetEdge: CreateEvent('onSetEdge', '(visEdge)->visEdge', 'pipe'),
+			onCreateEdge: Event('onCreateEdge', '(visEdge)->visEdge', 'pipe'),
+			onSetEdge: Event('onSetEdge', '(visEdge)->visEdge', 'pipe'),
 			GetEdge: edgeID => scope.engine.edges.get(edgeID),
 			RemoveEdge: (visEdgeOrEdgeID, triggerEvents = true) => scope.engine.edges.remove(triggerEvents ? scope.engine.onRemoveEdge.Trigger(visEdgeOrEdgeID) : visEdgeOrEdgeID),
-			onRemoveEdge: CreateEvent('onRemoveEdge', '(visEdgeOrEdgeID)->visEdgeOrEdgeID', 'pipe'),
+			onRemoveEdge: Event('onRemoveEdge', '(visEdgeOrEdgeID)->visEdgeOrEdgeID', 'pipe'),
 			//endregion
 		},
 
@@ -420,8 +422,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			scope.elementClasses[elemtnClass.classID] = triggerEvents ? event.Trigger(elemtnClass) : elemtnClass;
 			return [elemtnClass.classID];
 		},
-		onCreateElementClass: CreateEvent('onCreateElementClass', '(elementClass)->elementClass', 'pipe'),
-		onSetElementClass: CreateEvent('onSetElementClass', '(elementClass)->elementClass', 'pipe'),
+		onCreateElementClass: Event('onCreateElementClass', '(elementClass)->elementClass', 'pipe'),
+		onSetElementClass: Event('onSetElementClass', '(elementClass)->elementClass', 'pipe'),
 		GetElementClass: classID => typeof (classID) === 'undefined' ? Object.values(scope.elementClasses) : CopyObject(scope.elementClasses[classID]),
 		RemoveElementClass: function (classIDOrElementClass, triggerEvents = true) {
 			if (triggerEvents) classIDOrElementClass = scope.onRemoveElementClass.Trigger(classIDOrElementClass);
@@ -431,7 +433,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			delete scope.elementClasses[id];
 			return [id];
 		},
-		onRemoveElementClass: CreateEvent('onRemoveElementClass', '(classIDOrElementClass)->classIDOrElementClass', 'pipe'),
+		onRemoveElementClass: Event('onRemoveElementClass', '(classIDOrElementClass)->classIDOrElementClass', 'pipe'),
 		//endregion
 
 		//region Property classes manipulation
@@ -446,8 +448,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			scope.propertyClasses[propertyClass.propertyClassID] = triggerEvents ? event.Trigger(propertyClass) : propertyClass;
 			return [propertyClass.propertyClassID];
 		},
-		onCreatePropertyClass: CreateEvent('onCreatePropertyClass', '(propertyClass)->propertyClass', 'pipe'),
-		onSetPropertyClass: CreateEvent('onSetPropertyClass', '(propertyClass)->propertyClass', 'pipe'),
+		onCreatePropertyClass: Event('onCreatePropertyClass', '(propertyClass)->propertyClass', 'pipe'),
+		onSetPropertyClass: Event('onSetPropertyClass', '(propertyClass)->propertyClass', 'pipe'),
 		GetPropertyClass: propertyClassID => typeof (propertyClassID) === 'undefined' ? Object.values(scope.propertyClasses) : CopyObject(scope.propertyClasses[propertyClassID]),
 		RemovePropertyClass: function (propertyClassIDOrPropertyClass, triggerEvents = true) {
 			if (triggerEvents) propertyClassIDOrPropertyClass = scope.onRemovePropertyClass.Trigger(propertyClassIDOrPropertyClass);
@@ -457,7 +459,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			delete scope.propertyClasses[id];
 			return [id];
 		},
-		onRemovePropertyClass: CreateEvent('onRemovePropertyClass', '(propertyClassIDOrPropertyClass)->propertyClassIDOrPropertyClass', 'pipe'),
+		onRemovePropertyClass: Event('onRemovePropertyClass', '(propertyClassIDOrPropertyClass)->propertyClassIDOrPropertyClass', 'pipe'),
 		//endregion
 
 		//region Element styles manipulation
@@ -472,8 +474,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			scope.elementStyles[elementStyle.styleID] = triggerEvents ? event.Trigger(elementStyle) : elementStyle;
 			return [elementStyle.styleID];
 		},
-		onCreateElementStyle: CreateEvent('onCreateElementStyle', '(elementStyle)->elementStyle', 'pipe'),
-		onSetElementStyle: CreateEvent('onSetElementStyle', '(elementStyle)->elementStyle', 'pipe'),
+		onCreateElementStyle: Event('onCreateElementStyle', '(elementStyle)->elementStyle', 'pipe'),
+		onSetElementStyle: Event('onSetElementStyle', '(elementStyle)->elementStyle', 'pipe'),
 		GetElementStyle: styleID => typeof (styleID) === 'undefined' ? Object.values(scope.elementStyles) : CopyObject(scope.elementStyles[styleID]),
 		RemoveElementStyle: function (styleIDOrElementStyle, triggerEvents = true) {
 			if (triggerEvents) styleIDOrElementStyle = scope.onRemoveElementStyle.Trigger(styleIDOrElementStyle);
@@ -483,7 +485,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			delete scope.elementStyles[id];
 			return [id];
 		},
-		onRemoveElementStyle: CreateEvent('onRemoveElementStyle', '(styleIDOrElementStyle)->styleIDOrElementStyle', 'pipe'),
+		onRemoveElementStyle: Event('onRemoveElementStyle', '(styleIDOrElementStyle)->styleIDOrElementStyle', 'pipe'),
 		//endregion
 
 		//region Element properties manipulation
@@ -500,8 +502,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			scope.elementProperties[elementProperty.propertyID] = triggerEvents ? event.Trigger(elementProperty) : elementProperty;
 			return [elementProperty.propertyID];
 		},
-		onCreateElementProperty: CreateEvent('onCreateElementProperty', '(elementProperty)->elementProperty', 'pipe'),
-		onSetElementProperty: CreateEvent('onSetElementProperty', '(elementProperty)->elementProperty', 'pipe'),
+		onCreateElementProperty: Event('onCreateElementProperty', '(elementProperty)->elementProperty', 'pipe'),
+		onSetElementProperty: Event('onSetElementProperty', '(elementProperty)->elementProperty', 'pipe'),
 		GetElementProperty: propertyID => typeof (propertyID) === 'undefined' ? Object.values(scope.elementProperties) : CopyObject(scope.elementProperties[propertyID]),
 		RemoveElementProperty: function (propertyIDOrElementProperty, triggerEvents = true) {
 			if (triggerEvents) propertyIDOrElementProperty = scope.onRemoveElementProperty.Trigger(propertyIDOrElementProperty);
@@ -511,7 +513,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			delete scope.elementProperties[id];
 			return [id];
 		},
-		onRemoveElementProperty: CreateEvent('onRemoveElementProperty', '(propertyIDOrElementProperty)->propertyIDOrElementProperty', 'pipe'),
+		onRemoveElementProperty: Event('onRemoveElementProperty', '(propertyIDOrElementProperty)->propertyIDOrElementProperty', 'pipe'),
 		//endregion
 
 		//region Element types manipulation
@@ -536,9 +538,9 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			scope.elementTypes[elementType.typeID] = ValidateElementType(elementType);
 			return [elementType.typeID];
 		},
-		onValidateElementType: CreateEvent('onValidateElementType', '(rawElementType)->rawElementType', 'pipe'),
-		onCreateElementType: CreateEvent('onCreateElementType', '(elementType)->elementType', 'pipe'),
-		onSetElementType: CreateEvent('onSetElementType', '(elementType)->elementType', 'pipe'),
+		onValidateElementType: Event('onValidateElementType', '(rawElementType)->rawElementType', 'pipe'),
+		onCreateElementType: Event('onCreateElementType', '(elementType)->elementType', 'pipe'),
+		onSetElementType: Event('onSetElementType', '(elementType)->elementType', 'pipe'),
 		GetElementType: typeID => typeof (typeID) === 'undefined' ? Object.values(scope.elementTypes) : CopyObject(scope.elementTypes[typeID]),
 		RemoveElementType: function (typeIDOrElementType, triggerEvents = true) {
 			if (triggerEvents) typeIDOrElementType = scope.onRemoveElementType.Trigger(typeIDOrElementType);
@@ -548,7 +550,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			delete scope.elementTypes[id];
 			return [id];
 		},
-		onRemoveElementType: CreateEvent('onRemoveElementType', '(typeIDOrElementType)->typeIDOrElementType', 'pipe'),
+		onRemoveElementType: Event('onRemoveElementType', '(typeIDOrElementType)->typeIDOrElementType', 'pipe'),
 		//endregion
 
 		//region Elements manipulation
@@ -574,9 +576,9 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			scope.elements[element.elementID] = ValidateElement(element);
 			return [element.elementID];
 		},
-		onValidateElement: CreateEvent('onValidateElement', '(rawElement)->rawElement', 'pipe'),
-		onCreateElement: CreateEvent('onCreateElement', '(element)->element', 'pipe'),
-		onSetElement: CreateEvent('onSetElement', '(element)->element', 'pipe'),
+		onValidateElement: Event('onValidateElement', '(rawElement)->rawElement', 'pipe'),
+		onCreateElement: Event('onCreateElement', '(element)->element', 'pipe'),
+		onSetElement: Event('onSetElement', '(element)->element', 'pipe'),
 		GetElement: elementID => typeof (elementID) === 'undefined' ? Object.values(scope.elements) : CopyObject(scope.elements[elementID]),
 		RemoveElement: function (elementIDOrElement, triggerEvents = true) {
 			if (triggerEvents) elementIDOrElement = scope.onRemoveElement.Trigger(elementIDOrElement);
@@ -586,7 +588,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			delete scope.elements[id];
 			return [id];
 		},
-		onRemoveElement: CreateEvent('onRemoveElement', '(elementIDOrElement)->elementIDOrElement', 'pipe'),
+		onRemoveElement: Event('onRemoveElement', '(elementIDOrElement)->elementIDOrElement', 'pipe'),
 		//endregion
 
 
@@ -983,63 +985,6 @@ function GetArrayUniques(array) {
 	return [...new Set(array)];
 }
 
-/**
- * Создать событие.
- * @param eventName
- * @param eventType {'pipe','broadcast'} - Тип события. Pipe: композиция подписчиков, broadcast: независимые подписчики.
- */
-function CreateEvent(eventName, eventDescription, eventType) {
-	let e = {
-		eventName: eventName,
-		eventDescription: eventDescription,
-		eventType: eventType,
-		callbacks: {},
-		Subscribe: function (callback, replaceExisting = false, callbackID = undefined) {
-			let id = callbackID || GraphEditor.GenerateID();
-			if (e.callbacks.hasOwnProperty(id) && !replaceExisting)
-				throw `Event ${e.eventName} already has callback with id ${id}. Try to use replaceExisting = true or another callbackID.`;
-			e.callbacks[id] = callback;
-			return [id];
-		},
-		Unsubscribe: function (callbackID) {
-			if (e.callbacks.hasOwnProperty(callbackID)) {
-				delete e.callbacks[callbackID];
-				return [callbackID];
-			}
-			return null;
-		},
-		Trigger: function (...args) {
-			if (e.eventType === 'pipe') {
-				let callbacks = Object.values(e.callbacks);
-				if (args.length === 0) {
-					callbacks.forEach(cb => cb());
-					return;
-				}
-				if (args.length === 1) {
-					let buf = args[0];
-					callbacks.forEach(cb => buf = cb(buf));
-					return buf;
-				}
-				let buf = args;
-				callbacks.forEach(cb => buf = cb(...buf));
-				return buf;
-			} else if (e.eventType === 'broadcast') return Object.fromEntries(Object.entries(e.callbacks).map(([callbackID, callback]) => [callbackID, callback(...args)]));
-			else throw `Unknown event type ${e.eventType}. Can only trigger pipe or broadcast events.`;
-		},
-	};
-	return e;
-}
-
-function CreateNestedEvent(eventName, eventDescription = undefined, ...parentEvents) {
-	let e = CreateEvent(eventName, eventDescription, 'nested');
-	e.parentEvents = parentEvents;
-	e.eventDescription = e.eventDescription || GetArrayUniques(e.parentEvents.map(pe => pe.eventDescription)).join('; ');
-	delete e.callbacks;
-	e.Subscribe = (...eventConstructorArgs) => e.parentEvents.map(pe => pe.Subscribe(...eventConstructorArgs));
-	e.Unsubscribe = (...eventConstructorArgs) => e.parentEvents.map(pe => pe.Unsubscribe(...eventConstructorArgs));
-	return e;
-}
-
 function ValidateID(id) {
 	if (typeof (id) !== 'string')
 		throw `ID ${id} must be string.`;
@@ -1140,8 +1085,8 @@ function DataGraph(graphEditor) {
 			});
 			return scope.graphEditor.SetElementType(processorType.processorTypeID, 'node', processorType.processorTypeName, processorType.processorTypeDescription, processorType.processorTypeColor, props, processorType.processorStylesIDsArray);
 		},
-		onCreateProcessorType: CreateEvent('onCreateProcessorType', '(processorType)->processorType', 'pipe'),
-		onSetProcessorType: CreateEvent('onSetProcessorType', '(processorType)->processorType', 'pipe'),
+		onCreateProcessorType: Event('onCreateProcessorType', '(processorType)->processorType', 'pipe'),
+		onSetProcessorType: Event('onSetProcessorType', '(processorType)->processorType', 'pipe'),
 		//endregion
 	};
 
