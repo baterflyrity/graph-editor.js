@@ -73,15 +73,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		return rawElementOrElement;
 	}
 
-	function SerializeFunction(foo) {
-		return foo.toString();
-	}
-
-	function DeserializeFunction(foo) {
-		return new Function('return ' + foo)();
-	}
-
-
 	function GroupArray(array, keySelector = x => x, resultSelector = x => x) {
 		let groups = array.map(keySelector).filter((value, index, self) => self.indexOf(value) === index);
 		return groups.map(g => ({
@@ -306,12 +297,28 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			scope.clear();
 			if (savedGraph.hasOwnProperty('elementClasses'))
 				savedGraph.elementClasses.forEach(x => scope.SetElementClass(x.classID, x.visTemplate));
-			if (savedGraph.hasOwnProperty('propertyClasses'))
-				savedGraph.propertyClasses.forEach(x => scope.SetPropertyClass(x.propertyClassID, x.propertyConstructor, x.propertyParser));
+			if (savedGraph.hasOwnProperty('propertyClasses')) {
+				let hasCustom = false;
+				savedGraph.propertyClasses.forEach(x => {
+					if (typeof (x) === 'string') {
+						let p = scope.GetPropertyClass(x);
+						if (p) {
+							x = p;
+						} else {
+							hasCustom = true;
+							let text = scope.GetPropertyClass('text');
+							text.propertyClassID = x;
+							x = text;
+						}
+					}
+					scope.SetPropertyClass(x.propertyClassID, x.propertyConstructor, x.propertyParser);
+				});
+				if (hasCustom) Alert('Свойства пользовательских классов будут недоступны.', 'Внимание');
+			}
 			if (savedGraph.hasOwnProperty('elementStyles'))
 				savedGraph.elementStyles.forEach(x => scope.SetElementStyle(x.styleID, x.elementClassID, x.visTemplate));
 			if (savedGraph.hasOwnProperty('elementProperties'))
-				savedGraph.elementProperties.forEach(x => scope.SetElementProperty(x.propertyID, x.propertyClassID, x.propertyName, x.propertyDefaultValue));
+				savedGraph.elementProperties.forEach(x => scope.SetElementProperty(x.propertyID, x.propertyClassID, x.propertyName, x.propertyDefaultValue, x.propertyOptions));
 			if (savedGraph.hasOwnProperty('elementTypes'))
 				savedGraph.elementTypes.forEach(x => scope.SetElementType(x.typeID, x.elementClassID, x.typeName, x.typeDescription, x.typeColor, x.typePropertiesIDsArray, x.typeStylesIDsArray));
 			if (savedGraph.hasOwnProperty('elements'))
@@ -325,23 +332,15 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			scope.GetElementStyle().forEach(x => scope.RemoveElementStyle(x));
 			scope.GetPropertyClass().forEach(x => scope.RemovePropertyClass(x));
 			scope.GetElementClass().forEach(x => scope.RemoveElementClass(x));
+			CreateDefaults();
 		},
 		serialize: (savedGraph = undefined) => {
 			let data = (typeof (savedGraph) === 'undefined' ? scope.save() : savedGraph);
-			data.propertyClasses = data.propertyClasses.map(x => ({
-				propertyClassID: x.propertyClassID,
-				propertyConstructor: SerializeFunction(x.propertyConstructor),
-				propertyParser: SerializeFunction(x.propertyParser),
-			}));
+			data.propertyClasses = data.propertyClasses.map(x => x.propertyClassID);
 			return JSON.stringify(data);
 		},
 		deserialize: serializedGraph => {
 			let data = JSON.parse(serializedGraph);
-			data.propertyClasses = data.propertyClasses.map(x => ({
-				propertyClassID: x.propertyClassID,
-				propertyConstructor: DeserializeFunction(x.propertyConstructor),
-				propertyParser: DeserializeFunction(x.propertyParser),
-			}));
 			return scope.load(data);
 		},
 		download: (serializedGraph = undefined) => {
@@ -849,6 +848,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 							$modal.modal('hide');
 						} catch (e) {
 							ToggleError(false);
+							console.error(`Can not upload graph because: ${e}`);
 						}
 					};
 					reader.readAsText(currentFile);
@@ -929,7 +929,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		label: 'Сохранить',
 		icon: 'save',
 		click: _ => {
-			Alert('Свойства пользовательских классов будут недоступны.', 'Внимание');
+			Alert('Свойства пользовательских классов будут недоступны.', 'Внимание','warning');
 			scope.download();
 		}
 	}, {
