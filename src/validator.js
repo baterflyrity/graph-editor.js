@@ -36,12 +36,36 @@ function AssertType(value, type) {
 	if (!(valType === type || type.startsWith('*') && !valType.endsWith(clearType) || type.endsWith('*') && !valType.startsWith(clearType))) Raise(`value "${value}" must be "${type}" but "${valType}"`);
 }
 
-function Validate(data, scheme,fullData,fullScheme) {
-	if (scheme !== validationSchemeScheme && !Validate(scheme, validationSchemeScheme))
-		Raise(`can not validate data because scheme "${scheme}" is not correct`);
+function Validate(data, scheme, fullData, fullScheme) {
+	if (scheme === validationSchemeScheme) return;
+	try {
+		Validate(scheme, validationSchemeScheme);
+	} catch (e) {
+		Raise(`can not validate data because scheme "${scheme}" is not correct: ${e}`);
+	}
 	let schemeType = GetType(scheme);
 	if (schemeType === validationTypes.String) AssertType(data, scheme);
-	else if(schemeType=== validationTypes.Function) if(!scheme(data, scheme, fullData, fullScheme)) Raise(`custom validation of "${data}" failed`);
+	else if (schemeType === validationTypes.Function) {if (!scheme(data, scheme, fullData, fullScheme)) Raise(`custom validation of "${data}" failed`);} else if (schemeType === validationTypes.Array) {
+		AssertType(data, validationTypes.Array);
+		if (scheme.length === 1) data.forEach(item => Validate(item, scheme[0], fullData, fullScheme));
+		else if (scheme.length !== 0) Raise(`array validation must contain only one type but contains "${scheme.join(', ')}"`);
+	} else if (schemeType === validationTypes.Object) {
+		AssertType(data, validationTypes.Object);
+		let requiredProperties = Object.fromEntries(Object.entries(scheme).filter(([prop, type]) => !prop.endsWith('?')));
+		let optionalProperties = Object.fromEntries(Object.entries(scheme).filter(([prop, type]) => !(prop in requiredProperties)).map(([prop, type]) => [prop.replace('?', ''), type]));
+		let otherProperties = scheme['*'];
+		let requirements = Object.fromEntries(Object.entries(requiredProperties).map(([prop, type]) => [prop, false]));
+		Object.entries(data).forEach(([prop, val]) => {
+			let valScheme;
+			if (prop in requiredProperties) {
+				requirements[prop] = true;
+				valScheme = requiredProperties[prop];
+			} else if (prop in optionalProperties) valScheme = optionalProperties[prop];
+			else if (otherProperties) valScheme = otherProperties;
+			else Raise(`object "${data}" can not contain property "${prop}"`);
+			Validate(val, valScheme, fullData, fullScheme);
+		});
+	} else Raise(`unknown type of validation scheme "${scheme}"`);
 }
 
 function GenericType(...types) {
@@ -84,6 +108,6 @@ validationSchemeObjectBuffer['*'] = validationSchemeScheme;
 
  свойство = 'название свойства' - задать обязательное свойство
  свойство = 'название свойства?' - задать необязательное свойство
- свойство = '*' - задать типы остальных свойств объекта
+ свойство = '*' - задать тип и возможность присутствия остальных свойств объекта
 
  */
