@@ -114,7 +114,7 @@ function Validate(data, scheme, fullData, fullScheme) {
 		else if (scheme.length !== 0) Raise(`array validation must contain only one type but contains "${scheme.join(', ')}"`);
 	} else if (schemeType === validationTypes.Object) {
 		AssertType(data, validationTypes.Object);
-		let requiredProperties = Object.fromEntries(Object.entries(scheme).filter(([prop, type]) => !prop.endsWith('?')));
+		let requiredProperties = Object.fromEntries(Object.entries(scheme).filter(([prop, type]) => prop !== validationTypes.Any && !prop.endsWith('?')));
 		let optionalProperties = Object.fromEntries(Object.entries(scheme).filter(([prop, type]) => !(prop in requiredProperties)).map(([prop, type]) => [prop.replace('?', ''), type]));
 		let otherProperties = scheme['*'];
 		let requirements = Object.fromEntries(Object.entries(requiredProperties).map(([prop, type]) => [prop, false]));
@@ -128,6 +128,8 @@ function Validate(data, scheme, fullData, fullScheme) {
 			else Raise(`object "${data}" can not contain property "${prop}"`);
 			Validate(val, valScheme, fullData, fullScheme);
 		});
+		requirements = Object.entries(requirements).filter(([prop, exists]) => !exists).map(([prop, exists]) => prop);
+		if (requirements.length) Raise(`object "${data}" must contain "${requirements.join(', ')}"`);
 	} else Raise(`unknown type of validation scheme "${scheme}"`);
 }
 
