@@ -22,10 +22,71 @@
  * @return {string}
  */
 function GetType(value) {
-	return Object.prototype.toString.call(value).split(' ')[1].replace(']', '');
+	let fullType = Object.prototype.toString.call(value);
+	return fullType.substring(8, fullType.length - 1).replace(' ', '');
 }
 
-let validationTypes = Object.fromEntries('String, Number, Object, Array, Boolean, Undefined, Date, Function, Window, Symbol, Error, RegExp, Set, BigInt'.split(', ').map(t => [t, t]).concat([['Any', '*']]));
+
+/**
+ * Generate built in types from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects.
+ * @returns {Object}
+ */
+function GetDefaultTypes() {
+	let builtins = [
+		'Infinity',
+		'NaN',
+		'undefined',
+		'_ => _',
+		'async function () {}',
+		'{}',
+		'true',
+		'Symbol()',
+		'Error()',
+		'42',
+		'BigInt("0x1fffffffffffff")',
+		'new Date()',
+		'"qwerty"',
+		'/qwerty/gi',
+		'[]',
+		'new Int8Array(0)',
+		'new Uint8Array(0)',
+		'new Uint8ClampedArray(0)',
+		'new Int16Array(0)',
+		'new Uint16Array(0)',
+		'new Int32Array(0)',
+		'new Uint32Array(0)',
+		'new Float32Array(0)',
+		'new Float64Array(0)',
+		'new BigInt64Array(0)',
+		'new BigUint64Array(0)',
+		'new Map()',
+		'new Set()',
+		'new WeakMap()',
+		'new WeakSet()',
+		'new ArrayBuffer(0)',
+		'new DataView(new ArrayBuffer(0))',
+		'new Promise((rs, rj) => {})',
+		'(function* () {})()',
+		'(async function* () {})()',
+		'[].keys()',
+		'(function () {return arguments})()',
+	];
+	let lastType;
+	let undefinedType = GetType(undefined);
+
+	function TypeConstructor(expression) {
+		try {
+			eval(`lastType = ${expression}`);
+			return GetType(lastType);
+		} catch {
+			return undefinedType;
+		}
+	}
+
+	return Object.fromEntries([...new Set(builtins.map(TypeConstructor))].map(t => [t, t]).concat([['Any', '*']]));
+}
+
+let validationTypes = GetDefaultTypes();
 
 function AssertType(value, type) {
 	let typeType = GetType(type);
@@ -43,6 +104,8 @@ function Validate(data, scheme, fullData, fullScheme) {
 	} catch (e) {
 		Raise(`can not validate data because scheme "${scheme}" is not correct: ${e}`);
 	}
+	if (!fullData) fullData = data;
+	if (!fullScheme) fullScheme = scheme;
 	let schemeType = GetType(scheme);
 	if (schemeType === validationTypes.String) AssertType(data, scheme);
 	else if (schemeType === validationTypes.Function) {if (!scheme(data, scheme, fullData, fullScheme)) Raise(`custom validation of "${data}" failed`);} else if (schemeType === validationTypes.Array) {
@@ -76,9 +139,15 @@ function GenericType(...types) {
 	return validator;
 }
 
-let validationSchemeObjectBuffer = {};
-let validationSchemeScheme = GenericType(validationTypes.String, [validationTypes.String], validationSchemeObjectBuffer);
-validationSchemeObjectBuffer['*'] = validationSchemeScheme;
+function GenerateValidationSchemeScheme() {
+	let validationSchemeObjectBuffer = {};
+	let validationSchemeScheme = GenericType(validationTypes.String, [validationTypes.String], validationSchemeObjectBuffer);
+	validationSchemeObjectBuffer['*'] = validationSchemeScheme;
+	return validationSchemeScheme;
+}
+
+let validationSchemeScheme = GenerateValidationSchemeScheme();
+
 
 /*
  Возможные типы:
