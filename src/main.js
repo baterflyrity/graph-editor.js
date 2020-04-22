@@ -1,4 +1,4 @@
-//Last release: 1.1
+//Last release: 1.2.5-unstable
 function GraphEditor(container, hierarchical = true, editable = true) {
 
 	/**
