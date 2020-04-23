@@ -1,5 +1,4 @@
 //Last release: 1.1
-import {Event} from "./EventSystem";
 
 function GraphEditor(container, hierarchical = true, editable = true) {
 
