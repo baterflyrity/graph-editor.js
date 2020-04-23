@@ -146,7 +146,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 </div>
 </div>`);
 			Schedule(() => {
-				$dropdown = $dom.find('.property.dropdown');
+				let $dropdown = $dom.find('.property.dropdown');
 				$dropdown.find('.menu>.header').show();
 				$dropdown.dropdown({
 					hideDividers: 'empty',
