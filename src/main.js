@@ -764,9 +764,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				locale: 'ru',
 				physics: {
 					enabled: true,
-					stabilization: {
-						fit: false
-					}
+					maxVelocity:1,
+					minVelocity:0.5
 				},
 				layout: {
 					hierarchical: hierarchical ? {
@@ -778,6 +777,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 					} : false
 				}
 			});
+		console.log(scope.engine.GetNode());
 		if (editable) {
 			scope.engine.graph.addEventListener('select', function (e) {
 				if (editedClass && editedElement) scope.engine.onStopEditing.Trigger(editedClass, editedElement);
