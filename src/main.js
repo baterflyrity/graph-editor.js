@@ -309,7 +309,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		container: jQuery(container).first(),
 
 		//region Serialization
-		save: () => ({
+		save: () => scope.onSaveGraph.Trigger({
 			elementClasses: scope.GetElementClass(),
 			propertyClasses: scope.GetPropertyClass(),
 			elementStyles: scope.GetElementStyle(),
@@ -317,8 +317,10 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			elementTypes: scope.GetElementType(),
 			elements: scope.GetElement(),
 		}),
+		onSaveGraph: CreateEvent('onSave', '(savedGraph)->savedGraph', 'pipe'),
 		load: savedGraph => {
 			scope.clear();
+			savedGraph = scope.onLoadGraph.Trigger(savedGraph);
 			if (savedGraph.hasOwnProperty('elementClasses'))
 				savedGraph.elementClasses.forEach(x => scope.SetElementClass(x.classID, x.visTemplate));
 			if (savedGraph.hasOwnProperty('propertyClasses')) {
@@ -349,6 +351,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				savedGraph.elements.forEach(x => scope.SetElement(x.elementID, x.elementTypeID, x.elementPropertiesValues, x.elementClassArguments, x.nestedGraph, x.cahedTypedPropertiesValues));
 			FitZoom();
 		},
+		onLoadGraph: CreateEvent('onLoadGraph', '(savedGraph)->savedGraph', 'pipe'),
 		clear: () => {
 			scope.GetElement().forEach(x => scope.RemoveElement(x));
 			scope.GetElementType().forEach(x => scope.RemoveElementType(x));
@@ -356,22 +359,28 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			scope.GetElementStyle().forEach(x => scope.RemoveElementStyle(x));
 			scope.GetPropertyClass().forEach(x => scope.RemovePropertyClass(x));
 			scope.GetElementClass().forEach(x => scope.RemoveElementClass(x));
+			scope.onClearGraph.Trigger();
 			CreateDefaults();
 		},
+		onClearGraph: CreateEvent('onClearGraph', '()', 'broadcast'),
 		serialize: (savedGraph = undefined) => {
 			let data = (typeof (savedGraph) === 'undefined' ? scope.save() : savedGraph);
 			data.propertyClasses = data.propertyClasses.map(x => x.propertyClassID);
-			return JSON.stringify(data);
+			return JSON.stringify(scope.onSerializeGraph.Trigger(data));
 		},
+		onSerializeGraph: CreateEvent('onSerializeGraph', '(serializableGraph)->serializableGraph', 'pipe'),
 		deserialize: serializedGraph => {
 			let data = JSON.parse(serializedGraph);
-			return scope.load(data);
+			return scope.load(scope.onDeserializeGraph.Trigger(data));
 		},
+		onDeserializeGraph: CreateEvent('onDeserializeGraph', '(serializableGraph)->serializableGraph', 'pipe'),
 		download: (serializedGraph = undefined) => {
 			let data = typeof (serializedGraph) === 'undefined' ? scope.serialize() : serializedGraph;
-			return Download(data, 'graph.json', 'application/json');
+			return Download(scope.onDownloadGraph.Trigger(data), 'graph.json', 'application/json');
 		},
+		onDownloadGraph: CreateEvent('onDownloadGraph', '(serializedGraph)->serializedGraph', 'pipe'),
 		//upload - set in modal builder.
+		onUploadGraph: CreateEvent('onUploadGraph', '(serializedGraph)->serializedGraph', 'pipe'),
 		//endregion
 
 		engine: {
@@ -868,7 +877,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 					reader.onerror = reader.onabort = () => ToggleError(false);
 					reader.onload = function (e) {
 						try {
-							scope.deserialize(e.target.result);
+							scope.deserialize(scope.onUploadGraph.Trigger(e.target.result));
 							$approve.removeClass('loading');
 							$modal.modal('hide');
 						} catch (e) {
