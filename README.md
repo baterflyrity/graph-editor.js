@@ -37,3 +37,43 @@
         options = [
             "Отображаемый везде текст/html"
         ]
+        
+
+---
+
+#### Встроенные объекты
+
+Element classes:
+- node
+- edge
+
+Element types:
+- defaultNode
+- defaultEdge
+- titledNode
+- customTitledNode
+
+Element styles:
+- defaultNode
+- defaultEdge
+- greenNode
+- redNode
+
+Element properties:
+- label
+- hiddenLabel
+- title
+- customTitle
+
+Property classes:
+- text
+- select
+- optionalSelect
+- multiSelect
+- customSelect
+- customOptionalSelect
+- customMultiSelect
+- hidden
+- hiddenLabel
+
+
