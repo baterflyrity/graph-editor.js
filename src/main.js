@@ -149,7 +149,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				$dropdown.dropdown({
 					hideDividers: 'empty',
 					fullTextSearch: true,
-					// TODO: see issue #13
 					onChange: function (value, text, $choice) {
 						Schedule(function () {
 							$dropdown.find('.ui.header').map((hederIndex, headerElement) => {
