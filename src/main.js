@@ -149,14 +149,20 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				$dropdown.dropdown({
 					hideDividers: 'empty',
 					fullTextSearch: true,
-					// TODO: see issue #13
-					// onChange: function (value, text, $choice) {
-					// 	$dropdown.find('.menu>.header').each(function (i, e) {
-					// 		$e = $(e);
-					// 		if ($e.nextUntil('.header', '.item').not('.filtered').length) $e.show();
-					// 		else $e.hide();
-					// 	});
-					// },
+					onChange: function (value, text, $choice) {
+						Schedule(function () {
+							$dropdown.find('.ui.header').map((hederIndex, headerElement) => {
+								let $header = $(headerElement);
+								if ($header.nextUntil('.ui.header').filter((itemIndex, itemElement) => $(itemElement).is('.item')).toArray().every(itemElement => $(itemElement).is('.filtered'))) $header.hide();
+								else $header.show();
+							});
+						});
+					},
+				});
+				$dropdown.find('.ui.header').click(function () {
+					let items = $(this).nextUntil('.ui.header').filter((itemIndex, itemElement) => $(itemElement).is('.item')).toArray();
+					if (items.find(itemElement => $(itemElement).is('.filtered'))) items.forEach(item => $dropdown.dropdown('remove selected', $(item).data('value')));
+					else items.forEach(item => $dropdown.dropdown('set selected', $(item).data('value')));
 				});
 				if (multiple) defaultValue.forEach(val => $dropdown.dropdown('set selected', val));
 				else $dropdown.dropdown('set selected', defaultValue);
@@ -174,7 +180,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		}
 
 		function ConstructCustomMultiSelect(elementProperty, propertyValue, element) {
-			return ConstructDropdown(elementProperty.propertyName, propertyValue?propertyValue.options:false, propertyValue?propertyValue.value:false, true);
+			return ConstructDropdown(elementProperty.propertyName, propertyValue ? propertyValue.options : false, propertyValue ? propertyValue.value : false, true);
 		}
 
 		function ParseCustomSelect($propertyDOM, elementProperty, element) {
@@ -183,11 +189,11 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		}
 
 		function ConstructCustomSelect(elementProperty, propertyValue, element) {
-			return ConstructDropdown(elementProperty.propertyName, propertyValue?propertyValue.options:false, propertyValue? propertyValue.value:false);
+			return ConstructDropdown(elementProperty.propertyName, propertyValue ? propertyValue.options : false, propertyValue ? propertyValue.value : false);
 		}
 
 		function ConstructCustomOptionalSelect(elementProperty, propertyValue, element) {
-			return ConstructDropdown(elementProperty.propertyName, propertyValue?propertyValue.options:false, propertyValue? propertyValue.value:false, false, true);
+			return ConstructDropdown(elementProperty.propertyName, propertyValue ? propertyValue.options : false, propertyValue ? propertyValue.value : false, false, true);
 		}
 
 		function ConstructMultiSelect(elementProperty, propertyValue, element) {
@@ -604,7 +610,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			if (!scope.elements.hasOwnProperty(id)) return [];
 			delete scope.elements[id];
 			//Remove connected edges.
-			scope.GetElement().filter(e=>e.visTemplate.from===id || e.visTemplate.to === id).map(e=>scope.RemoveElement(e));
+			scope.GetElement().filter(e => e.visTemplate.from === id || e.visTemplate.to === id).map(e => scope.RemoveElement(e));
 			return [id];
 		},
 		onRemoveElement: CreateEvent('onRemoveElement', '(elementIDOrElement)->elementIDOrElement', 'pipe'),
@@ -624,7 +630,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 	scope.onUpdateElementProperty = CreateNestedEvent('onUpdateElementProperty', false, scope.onCreateElementProperty, scope.onSetElementProperty);
 	scope.onUpdateElementType = CreateNestedEvent('onUpdateElementType', false, scope.onCreateElementType, scope.onSetElementType);
 	scope.onUpdateElement = CreateNestedEvent('onUpdateElement', false, scope.onCreateElement, scope.onSetElement);
-	Object.getOwnPropertyNames(scope).filter(x => x.startsWith('on')).map(x=>PatchAfterEvent(scope[x]));
+	Object.getOwnPropertyNames(scope).filter(x => x.startsWith('on')).map(x => PatchAfterEvent(scope[x]));
 
 	CreateBindings();
 	CreateDefaults();
@@ -775,8 +781,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				locale: 'ru',
 				physics: {
 					enabled: true,
-					maxVelocity:1,
-					minVelocity:0.5
+					maxVelocity: 1,
+					minVelocity: 0.5
 				},
 				layout: {
 					hierarchical: hierarchical ? {
@@ -965,7 +971,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		label: 'Сохранить',
 		icon: 'save',
 		click: _ => {
-			Alert('Свойства пользовательских классов будут недоступны.', 'Внимание','warning');
+			Alert('Свойства пользовательских классов будут недоступны.', 'Внимание', 'warning');
 			scope.download();
 		}
 	}, {
