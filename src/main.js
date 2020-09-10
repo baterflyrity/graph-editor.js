@@ -144,19 +144,25 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 </div>
 </div>`);
 			Schedule(() => {
-				$dropdown = $dom.find('.property.dropdown');
+				let $dropdown = $dom.find('.property.dropdown');
 				$dropdown.find('.menu>.header').show();
 				$dropdown.dropdown({
 					hideDividers: 'empty',
 					fullTextSearch: true,
-					// TODO: see issue #13
-					// onChange: function (value, text, $choice) {
-					// 	$dropdown.find('.menu>.header').each(function (i, e) {
-					// 		$e = $(e);
-					// 		if ($e.nextUntil('.header', '.item').not('.filtered').length) $e.show();
-					// 		else $e.hide();
-					// 	});
-					// },
+					onChange: function (value, text, $choice) {
+						Schedule(function () {
+							$dropdown.find('.ui.header').map((hederIndex, headerElement) => {
+								let $header = $(headerElement);
+								if ($header.nextUntil('.ui.header').filter((itemIndex, itemElement) => $(itemElement).is('.item')).toArray().every(itemElement => $(itemElement).is('.filtered'))) $header.hide();
+								else $header.show();
+							});
+						});
+					},
+				});
+				$dropdown.find('.ui.header').click(function () {
+					let items = $(this).nextUntil('.ui.header').filter((itemIndex, itemElement) => $(itemElement).is('.item')).toArray();
+					if (items.find(itemElement => $(itemElement).is('.filtered'))) items.forEach(item => $dropdown.dropdown('remove selected', $(item).data('value')));
+					else items.forEach(item => $dropdown.dropdown('set selected', $(item).data('value')));
 				});
 				if (multiple) defaultValue.forEach(val => $dropdown.dropdown('set selected', val));
 				else $dropdown.dropdown('set selected', defaultValue);
@@ -174,7 +180,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		}
 
 		function ConstructCustomMultiSelect(elementProperty, propertyValue, element) {
-			return ConstructDropdown(elementProperty.propertyName, propertyValue?propertyValue.options:false, propertyValue?propertyValue.value:false, true);
+			return ConstructDropdown(elementProperty.propertyName, propertyValue ? propertyValue.options : false, propertyValue ? propertyValue.value : false, true);
 		}
 
 		function ParseCustomSelect($propertyDOM, elementProperty, element) {
@@ -183,11 +189,11 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		}
 
 		function ConstructCustomSelect(elementProperty, propertyValue, element) {
-			return ConstructDropdown(elementProperty.propertyName, propertyValue?propertyValue.options:false, propertyValue? propertyValue.value:false);
+			return ConstructDropdown(elementProperty.propertyName, propertyValue ? propertyValue.options : false, propertyValue ? propertyValue.value : false);
 		}
 
 		function ConstructCustomOptionalSelect(elementProperty, propertyValue, element) {
-			return ConstructDropdown(elementProperty.propertyName, propertyValue?propertyValue.options:false, propertyValue? propertyValue.value:false, false, true);
+			return ConstructDropdown(elementProperty.propertyName, propertyValue ? propertyValue.options : false, propertyValue ? propertyValue.value : false, false, true);
 		}
 
 		function ConstructMultiSelect(elementProperty, propertyValue, element) {
@@ -295,11 +301,21 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		}));
 	}
 
+	function PatchAfterEvent(baseEvent) {
+		let name = 'onAfter' + baseEvent.eventName.substring(2);
+		let event = CreateEvent(name, baseEvent.eventDescription.split('->')[0], 'broadcast');
+		baseEvent.Subscribe(function (data) {
+			Schedule(() => event.Trigger(data));
+			return data;
+		})
+		scope[name] = event;
+	}
+
 	let scope = {
 		container: jQuery(container).first(),
 
 		//region Serialization
-		save: () => ({
+		save: () => scope.onSaveGraph.Trigger({
 			elementClasses: scope.GetElementClass(),
 			propertyClasses: scope.GetPropertyClass(),
 			elementStyles: scope.GetElementStyle(),
@@ -307,8 +323,10 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			elementTypes: scope.GetElementType(),
 			elements: scope.GetElement(),
 		}),
+		onSaveGraph: CreateEvent('onSave', '(savedGraph)->savedGraph', 'pipe'),
 		load: savedGraph => {
 			scope.clear();
+			savedGraph = scope.onLoadGraph.Trigger(savedGraph);
 			if (savedGraph.hasOwnProperty('elementClasses'))
 				savedGraph.elementClasses.forEach(x => scope.SetElementClass(x.classID, x.visTemplate));
 			if (savedGraph.hasOwnProperty('propertyClasses')) {
@@ -339,6 +357,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				savedGraph.elements.forEach(x => scope.SetElement(x.elementID, x.elementTypeID, x.elementPropertiesValues, x.elementClassArguments, x.nestedGraph, x.cahedTypedPropertiesValues));
 			FitZoom();
 		},
+		onLoadGraph: CreateEvent('onLoadGraph', '(savedGraph)->savedGraph', 'pipe'),
 		clear: () => {
 			scope.GetElement().forEach(x => scope.RemoveElement(x));
 			scope.GetElementType().forEach(x => scope.RemoveElementType(x));
@@ -346,22 +365,28 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			scope.GetElementStyle().forEach(x => scope.RemoveElementStyle(x));
 			scope.GetPropertyClass().forEach(x => scope.RemovePropertyClass(x));
 			scope.GetElementClass().forEach(x => scope.RemoveElementClass(x));
+			scope.onClearGraph.Trigger();
 			CreateDefaults();
 		},
+		onClearGraph: CreateEvent('onClearGraph', '()', 'broadcast'),
 		serialize: (savedGraph = undefined) => {
 			let data = (typeof (savedGraph) === 'undefined' ? scope.save() : savedGraph);
 			data.propertyClasses = data.propertyClasses.map(x => x.propertyClassID);
-			return JSON.stringify(data);
+			return JSON.stringify(scope.onSerializeGraph.Trigger(data));
 		},
+		onSerializeGraph: CreateEvent('onSerializeGraph', '(serializableGraph)->serializableGraph', 'pipe'),
 		deserialize: serializedGraph => {
 			let data = JSON.parse(serializedGraph);
-			return scope.load(data);
+			return scope.load(scope.onDeserializeGraph.Trigger(data));
 		},
+		onDeserializeGraph: CreateEvent('onDeserializeGraph', '(serializableGraph)->serializableGraph', 'pipe'),
 		download: (serializedGraph = undefined) => {
 			let data = typeof (serializedGraph) === 'undefined' ? scope.serialize() : serializedGraph;
-			return Download(data, 'graph.json', 'application/json');
+			return Download(scope.onDownloadGraph.Trigger(data), 'graph.json', 'application/json');
 		},
+		onDownloadGraph: CreateEvent('onDownloadGraph', '(serializedGraph)->serializedGraph', 'pipe'),
 		//upload - set in modal builder.
+		onUploadGraph: CreateEvent('onUploadGraph', '(serializedGraph)->serializedGraph', 'pipe'),
 		//endregion
 
 		engine: {
@@ -584,6 +609,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			let id = typeof (elementIDOrElement) === 'object' ? elementIDOrElement.elementID : elementIDOrElement;
 			if (!scope.elements.hasOwnProperty(id)) return [];
 			delete scope.elements[id];
+			//Remove connected edges.
+			scope.GetElement().filter(e => e.visTemplate.from === id || e.visTemplate.to === id).map(e => scope.RemoveElement(e));
 			return [id];
 		},
 		onRemoveElement: CreateEvent('onRemoveElement', '(elementIDOrElement)->elementIDOrElement', 'pipe'),
@@ -603,6 +630,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 	scope.onUpdateElementProperty = CreateNestedEvent('onUpdateElementProperty', false, scope.onCreateElementProperty, scope.onSetElementProperty);
 	scope.onUpdateElementType = CreateNestedEvent('onUpdateElementType', false, scope.onCreateElementType, scope.onSetElementType);
 	scope.onUpdateElement = CreateNestedEvent('onUpdateElement', false, scope.onCreateElement, scope.onSetElement);
+	Object.getOwnPropertyNames(scope).filter(x => x.startsWith('on')).map(x => PatchAfterEvent(scope[x]));
 
 	CreateBindings();
 	CreateDefaults();
@@ -753,9 +781,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				locale: 'ru',
 				physics: {
 					enabled: true,
-					stabilization: {
-						fit: false
-					}
+					maxVelocity: 1,
+					minVelocity: 0.5
 				},
 				layout: {
 					hierarchical: hierarchical ? {
@@ -767,6 +794,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 					} : false
 				}
 			});
+		console.log(scope.engine.GetNode());
 		if (editable) {
 			scope.engine.graph.addEventListener('select', function (e) {
 				if (editedClass && editedElement) scope.engine.onStopEditing.Trigger(editedClass, editedElement);
@@ -857,7 +885,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 					reader.onerror = reader.onabort = () => ToggleError(false);
 					reader.onload = function (e) {
 						try {
-							scope.deserialize(e.target.result);
+							scope.deserialize(scope.onUploadGraph.Trigger(e.target.result));
 							$approve.removeClass('loading');
 							$modal.modal('hide');
 						} catch (e) {
@@ -943,7 +971,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		label: 'Сохранить',
 		icon: 'save',
 		click: _ => {
-			Alert('Свойства пользовательских классов будут недоступны.', 'Внимание','warning');
+			Alert('Свойства пользовательских классов будут недоступны.', 'Внимание', 'warning');
 			scope.download();
 		}
 	}, {

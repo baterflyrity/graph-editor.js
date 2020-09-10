@@ -27,7 +27,7 @@
 	$(function () {
 		//All ids must be string!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		//Create graph in container 'body'.
-		ge = GraphEditor('body');
+		ge = GraphEditor('body',false);
 		//Create node display style.
 		ge.SetElementStyle('greenNode', 'node', Object.assign({}, ge.GetElementStyle('defaultNode'), {color: 'green'})); //Just copied defaultNode style and changed color.
 		ge.SetElementStyle('redNode', 'node', Object.assign({}, ge.GetElementStyle('defaultNode'), {color: 'red'}));

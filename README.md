@@ -44,36 +44,33 @@
 #### Встроенные объекты
 
 Element classes:
-- node
-- edge
-
-Element types:
-- defaultNode
-- defaultEdge
-- titledNode
-- customTitledNode
-
-Element styles:
-- defaultNode
-- defaultEdge
-- greenNode
-- redNode
-
-Element properties:
-- label
-- hiddenLabel
-- title
-- customTitle
+- `node` - базовый класс узлов.
+- `edge` - базовый класс рёбер.
 
 Property classes:
-- text
-- select
-- optionalSelect
-- multiSelect
-- customSelect
-- customOptionalSelect
-- customMultiSelect
-- hidden
-- hiddenLabel
+- `text` - простое текстовое поле.
+- `select` - выпадающий список для выбора одной опции.
+- `optionalSelect` - выпадающий список для выбора одной опции или отсутствия опций.
+- `multiSelect` - выпадающий список для выбора нескольких опций или отсутствия опций.
+- `customSelect` - выпадающий список для выбора одной динамической опции. Опции хранятся в поле `propertyValue` свойства и могут быть изменены в процессе работы.
+- `customOptionalSelect` - выпадающий список для выбора одной динамической опции или отсутствия опций. Опции хранятся в поле `propertyValue` свойства и могут быть изменены в процессе работы.
+- `customMultiSelect` - выпадающий список для выбора нескольких динамических опций или отсутствия опций. Опции хранятся в поле `propertyValue` свойства и могут быть изменены в процессе работы.
+- `hidden` - простое скрытое текстовое поле.
+- `hiddenLabel` - простое скрытое текстовое поле, которое является базой для определения имени узла (см. element property: *hiddenLabel*).
+
+Element properties:
+- `label` - изменяемое название узла.
+- `hiddenLabel` - неизменяемое название узла.
+
+Element styles:
+- `defaultNode` - элипсовидный голубой узел.
+- `defaultEdge` - стрелочное в сторону конца сплошное ребро с градиентным цветом между узлами.
+
+Element types:
+- `defaultNode` - узел стиля *defaultNode* со свойством *label*.
+- `defaultEdge` - ребро стиля *defaultEdge*.
+
+
+
 
 
