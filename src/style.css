@@ -56,8 +56,8 @@
 }
 
 
-/*.graph-editor .class-editor [data-property] .ui.multiple.dropdown .menu .active.item + .dividing.header {*/
-/*    display: none;*/
-/*}*/
+.graph-editor .class-editor [data-property] .ui.multiple.dropdown .menu .dividing.header {
+    cursor: pointer;
+}
 
 
