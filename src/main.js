@@ -152,13 +152,17 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 					onChange: function (value, text, $choice) {
 						Schedule(function () {
 							$dropdown.find('.ui.header').map((hederIndex, headerElement) => {
-								$header = $(headerElement);
+								let $header = $(headerElement);
 								if ($header.nextUntil('.ui.header').filter((itemIndex, itemElement) => $(itemElement).is('.item')).toArray().every(itemElement => $(itemElement).is('.filtered'))) $header.hide();
 								else $header.show();
-								console.log(headerElement, $header.nextUntil('.ui.header').filter((itemIndex, itemElement) => $(itemElement).is('.item')).toArray().every(itemElement => $(itemElement).is('.filtered')));
 							});
 						});
 					},
+				});
+				$dropdown.find('.ui.header').click(function () {
+					let items = $(this).nextUntil('.ui.header').filter((itemIndex, itemElement) => $(itemElement).is('.item')).toArray();
+					if (items.find(itemElement => $(itemElement).is('.filtered'))) items.forEach(item => $dropdown.dropdown('remove selected', $(item).data('value')));
+					else items.forEach(item => $dropdown.dropdown('set selected', $(item).data('value')));
 				});
 				if (multiple) defaultValue.forEach(val => $dropdown.dropdown('set selected', val));
 				else $dropdown.dropdown('set selected', defaultValue);
