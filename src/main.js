@@ -603,6 +603,8 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			let id = typeof (elementIDOrElement) === 'object' ? elementIDOrElement.elementID : elementIDOrElement;
 			if (!scope.elements.hasOwnProperty(id)) return [];
 			delete scope.elements[id];
+			//Remove connected edges.
+			scope.GetElement().filter(e=>e.visTemplate.from===id || e.visTemplate.to === id).map(e=>scope.RemoveElement(e));
 			return [id];
 		},
 		onRemoveElement: CreateEvent('onRemoveElement', '(elementIDOrElement)->elementIDOrElement', 'pipe'),
