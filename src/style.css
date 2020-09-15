@@ -60,4 +60,8 @@
     cursor: pointer;
 }
 
+.element.type.meta {
+    float: right;
+}
+
 

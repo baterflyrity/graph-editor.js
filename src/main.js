@@ -615,8 +615,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		},
 		onRemoveElement: CreateEvent('onRemoveElement', '(elementIDOrElement)->elementIDOrElement', 'pipe'),
 		//endregion
-
-
 	};
 
 	scope.container.html('<div class="graph-editor"></div>');
@@ -661,6 +659,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 								<i class="dropdown icon"></i>
 								<div class="menu">${availableTypesBuff.join('')}</div>
 							</div>
+							<span class="element type meta"></span>
 						</div>
 						<div class="meta">${elementClassID}</div>
 						<div class="description">
@@ -794,7 +793,6 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 					} : false
 				}
 			});
-		console.log(scope.engine.GetNode());
 		if (editable) {
 			scope.engine.graph.addEventListener('select', function (e) {
 				if (editedClass && editedElement) scope.engine.onStopEditing.Trigger(editedClass, editedElement);
@@ -1193,4 +1191,13 @@ function DataGraph(graphEditor) {
 
 
 	return scope;
+}
+
+
+function SetElementTypeMeta(text) {
+	$('.element.type.meta').text(text);
+}
+
+function ClearElementTypeMeta() {
+	SetElementTypeMeta('');
 }
