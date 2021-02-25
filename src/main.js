@@ -1,5 +1,5 @@
 //Last release: 1.2.5-unstable
-function GraphEditor(container, hierarchical = true, editable = true) {
+function GraphEditor(container, hierarchical = true, editable = true, physics=false) {
 
 	/**
 	 * Check own property existence. In case object does not contain such property and default value defined assignes that property to object and also returns true.
@@ -779,7 +779,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				},
 				locale: 'ru',
 				physics: {
-					enabled: true,
+					enabled: physics,
 					maxVelocity: 1,
 					minVelocity: 0.5
 				},

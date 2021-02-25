@@ -2,7 +2,7 @@
   "dependencies": {
     "del": "^5.1.0",
     "execa": "latest",
-    "fomantic-ui": "^2.8.4",
+    "fomantic-ui": "2.8.4",
     "gulp": "latest",
     "gulp-clean-css": "^4.3.0",
     "gulp-concat": "latest",
