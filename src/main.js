@@ -595,6 +595,7 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 				nestedGraph: nestedGraph,
 				cachedTypedPropertiesValues: cachedTypedPropertiesValues
 			};
+			if (typeof (element.elementClassArguments.x) === 'undefined' && typeof (element.elementClassArguments.y) === 'undefined') element.elementClassArguments.autolayout = true;
 			if (triggerEvents)
 				element = scope.onValidateElement.Trigger(element);
 			element = ValidateElement(element);
@@ -622,6 +623,9 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 			return [id];
 		},
 		onRemoveElement: CreateEvent('onRemoveElement', '(elementIDOrElement)->elementIDOrElement', 'pipe'),
+		Layout: function (spacing = {x: 200, y: 100}) {
+			scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'node').map(node => CalculateNodeLayout(node, spacing)).forEach(e => scope.SetElement(e.elementID, e.elementTypeID, e.elementPropertiesValues, e.elementClassArguments, e.nestedGraph, e.cachedTypedPropertiesValues));
+		},
 		//endregion
 	};
 
@@ -954,6 +958,21 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 		a.click();
 	}
 
+	function GetNodeInputPathLength(node) {
+		if (!node) return 0;
+		//TODO: fix stack overflow error when cycled.
+		let parentLengths = scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'edge' && e.elementClassArguments.to === node.elementID).map(e => GetNodeInputPathLength(scope.GetElement(e.elementClassArguments.from)));
+		return parentLengths.length ? Math.max(...parentLengths) + 1 : 0;
+	}
+
+	function CalculateNodeLayout(node, spacing = {x: 200, y: 100}) {
+		if (!node || !node.elementClassArguments.autolayout) return node;
+		let level = GetNodeInputPathLength(node);
+		let index = scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'node' && GetNodeInputPathLength(e) === level).indexOf(node);
+		node.elementClassArguments = Object.assign({}, node.elementClassArguments, {x: spacing.x * index, y: spacing.y * level});
+		return node;
+	}
+
 	let $modal = BuildModal();
 	let $graph = BuildGraph();
 	scope.upload = () => $modal.show();
@@ -977,7 +996,7 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 		label: 'Сохранить',
 		icon: 'save',
 		click: _ => {
-			if(hierarchical) Alert('Позии узлов в иерархическом режиме просмотра не сохраняются.', 'Внимание', 'warning');
+			if (hierarchical) Alert('Позии узлов в иерархическом режиме просмотра не сохраняются.', 'Внимание', 'warning');
 			Alert('Свойства пользовательских классов будут недоступны.', 'Внимание', 'warning');
 			scope.download();
 		}
