@@ -1,5 +1,5 @@
 //Last release: 1.2.5-unstable
-function GraphEditor(container, hierarchical = true, editable = true, physics=false) {
+function GraphEditor(container, hierarchical = true, editable = true, physics = false) {
 
 	/**
 	 * Check own property existence. In case object does not contain such property and default value defined assignes that property to object and also returns true.
@@ -301,6 +301,18 @@ function GraphEditor(container, hierarchical = true, editable = true, physics=fa
 		}));
 	}
 
+	function RetrieveNodePositionIfNone(element) {
+		if (element && scope.GetElementType(element.elementTypeID).elementClassID === 'node') {
+			scope.engine.graph.storePositions();
+			let visTemplate = scope.engine.nodes.get(element.elementID);
+			if (visTemplate) {
+				element.elementClassArguments = Object.assign({x: visTemplate.x, y: visTemplate.y}, element.elementClassArguments);
+				element.visTemplate = Object.assign({}, element.visTemplate, visTemplate);
+			}
+		}
+		return element;
+	}
+
 	function PatchAfterEvent(baseEvent) {
 		let name = 'onAfter' + baseEvent.eventName.substring(2);
 		let event = CreateEvent(name, baseEvent.eventDescription.split('->')[0], 'broadcast');
@@ -359,7 +371,7 @@ function GraphEditor(container, hierarchical = true, editable = true, physics=fa
 		},
 		onLoadGraph: CreateEvent('onLoadGraph', '(savedGraph)->savedGraph', 'pipe'),
 		clear: () => {
-			scope.GetElement().forEach(x => scope.RemoveElement(x));
+			scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'node').forEach(x => scope.RemoveElement(x));
 			scope.GetElementType().forEach(x => scope.RemoveElementType(x));
 			scope.GetElementProperty().forEach(x => scope.RemoveElementProperty(x));
 			scope.GetElementStyle().forEach(x => scope.RemoveElementStyle(x));
@@ -602,7 +614,7 @@ function GraphEditor(container, hierarchical = true, editable = true, physics=fa
 		onValidateElement: CreateEvent('onValidateElement', '(rawElement)->rawElement', 'pipe'),
 		onCreateElement: CreateEvent('onCreateElement', '(element)->element', 'pipe'),
 		onSetElement: CreateEvent('onSetElement', '(element)->element', 'pipe'),
-		GetElement: elementID => typeof (elementID) === 'undefined' ? Object.values(scope.elements) : CopyObject(scope.elements[elementID]),
+		GetElement: elementID => typeof (elementID) === 'undefined' ? Object.values(scope.elements).map(RetrieveNodePositionIfNone) : RetrieveNodePositionIfNone(CopyObject(scope.elements[elementID])),
 		RemoveElement: function (elementIDOrElement, triggerEvents = true) {
 			if (triggerEvents) elementIDOrElement = scope.onRemoveElement.Trigger(elementIDOrElement);
 			if (typeof (elementIDOrElement) === 'undefined') return [];
@@ -1091,7 +1103,9 @@ function DataGraph(graphEditor) {
 	graphEditor.SetElementProperty('pipeData', 'hiddenLabel', 'transmitted data', '*');
 	graphEditor.SetElementType('dataPipe', 'edge', 'Data pipe', 'Передаваемые данные', 'blue', ['pipeData'], ['defaultEdge']);
 
-	function DummyHandler(processorData) {return processorData;}
+	function DummyHandler(processorData) {
+		return processorData;
+	}
 
 	/**
 	 * @param connectionType {'from'|'to'}

@@ -12,7 +12,7 @@
     "gulp-shell": "^0.8.0",
     "gulp-terser": "latest",
     "jquery": "^3.5.0",
-    "vis-network": "^7.4.0",
+    "vis-network": "~7.10.2",
     "yargs": "latest"
   },
   "scripts": {
