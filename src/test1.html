@@ -5,15 +5,15 @@
 	<title>Graph editor example</title>
 	<!--jQuery-->
 	<script src="../node_modules/jquery/dist/jquery.min.js"></script>
-	
+
 	<!--Semantic-UI-->
 	<link rel="stylesheet" href="../node_modules/fomantic-ui/dist/semantic.css"/>
 	<script src="../node_modules/fomantic-ui/dist/semantic.js"></script>
-	
+
 	<!--Vis.js Network-->
 	<script type="text/javascript" src="../node_modules/vis-network/dist/vis-network.min.js"></script>
 	<script type="text/javascript" src="vis-network.patch.js"></script>
-	
+
 	<!--Graph Editor-->
 	<link rel="stylesheet" type="text/css" href="style.css">
 	<script type="text/javascript" src="main.js"></script>
@@ -27,7 +27,7 @@
 	$(function () {
 		//All ids must be string!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		//Create graph in container 'body'.
-		ge = GraphEditor('body',true);
+		ge = GraphEditor('body', false);
 		//Create node display style.
 		ge.SetElementStyle('greenNode', 'node', Object.assign({}, ge.GetElementStyle('defaultNode'), {color: 'green'})); //Just copied defaultNode style and changed color.
 		ge.SetElementStyle('redNode', 'node', Object.assign({}, ge.GetElementStyle('defaultNode'), {color: 'red'}));

@@ -303,12 +303,8 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 
 	function RetrieveNodePositionIfNone(element) {
 		if (element && scope.GetElementType(element.elementTypeID).elementClassID === 'node') {
-			scope.engine.graph.storePositions();
 			let visTemplate = scope.engine.nodes.get(element.elementID);
-			if (visTemplate) {
-				element.elementClassArguments = Object.assign({x: visTemplate.x, y: visTemplate.y}, element.elementClassArguments);
-				element.visTemplate = Object.assign({}, element.visTemplate, visTemplate);
-			}
+			if (visTemplate) element.elementClassArguments = Object.assign({}, element.elementClassArguments, scope.engine.graph.getPosition(element.elementID));
 		}
 		return element;
 	}
@@ -981,6 +977,7 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 		label: 'Сохранить',
 		icon: 'save',
 		click: _ => {
+			if(hierarchical) Alert('Позии узлов в иерархическом режиме просмотра не сохраняются.', 'Внимание', 'warning');
 			Alert('Свойства пользовательских классов будут недоступны.', 'Внимание', 'warning');
 			scope.download();
 		}
