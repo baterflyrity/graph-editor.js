@@ -623,7 +623,7 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 			return [id];
 		},
 		onRemoveElement: CreateEvent('onRemoveElement', '(elementIDOrElement)->elementIDOrElement', 'pipe'),
-		Layout: function (spacing = {x: 200, y: 100}) {
+		Layout(spacing = {x: 200, y: 100}) {
 			scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'node').map(node => CalculateNodeLayout(node, spacing)).forEach(e => scope.SetElement(e.elementID, e.elementTypeID, e.elementPropertiesValues, e.elementClassArguments, e.nestedGraph, e.cachedTypedPropertiesValues));
 		},
 		//endregion
@@ -803,6 +803,11 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 						levelSeparation: 200,
 						nodeSpacing: 50,
 					} : false
+				},
+				edges: {
+					smooth: {
+						type: 'continuous',
+					}
 				}
 			});
 		if (editable) {
@@ -958,18 +963,20 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 		a.click();
 	}
 
-	function GetNodeInputPathLength(node) {
-		if (!node) return 0;
-		//TODO: fix stack overflow error when cycled.
-		let parentLengths = scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'edge' && e.elementClassArguments.to === node.elementID).map(e => GetNodeInputPathLength(scope.GetElement(e.elementClassArguments.from)));
+	function GetNodeInputPathLength(nodeID, path = []) {
+		if (!nodeID || path.indexOf(nodeID) !== -1) return 0;
+		let parentLengths = scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'edge' && e.elementClassArguments.to === nodeID).map(e=>scope.GetElement(e.elementClassArguments.from)).filter(e=>!!e).map(e => GetNodeInputPathLength(e.elementID, path.concat([nodeID])));
 		return parentLengths.length ? Math.max(...parentLengths) + 1 : 0;
 	}
 
 	function CalculateNodeLayout(node, spacing = {x: 200, y: 100}) {
-		if (!node || !node.elementClassArguments.autolayout) return node;
-		let level = GetNodeInputPathLength(node);
-		let index = scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'node' && GetNodeInputPathLength(e) === level).indexOf(node);
-		node.elementClassArguments = Object.assign({}, node.elementClassArguments, {x: spacing.x * index, y: spacing.y * level});
+		if (!node || !(node.elementClassArguments.autolayout === true)) return node;
+		let level = GetNodeInputPathLength(node.elementID);
+		let index = scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'node' && GetNodeInputPathLength(e.elementID) === level).indexOf(node);
+		node = CopyObject(node);
+		node.elementClassArguments.x = spacing.x * index;
+		node.elementClassArguments.y = spacing.y * level;
+		node.elementClassArguments.autolayout = false;
 		return node;
 	}
 
