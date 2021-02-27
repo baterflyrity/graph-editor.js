@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Autolayout example</title>
+	<!--jQuery-->
+	<script src="../node_modules/jquery/dist/jquery.min.js"></script>
+
+	<!--Semantic-UI-->
+	<link rel="stylesheet" href="../node_modules/fomantic-ui/dist/semantic.css"/>
+	<script src="../node_modules/fomantic-ui/dist/semantic.js"></script>
+
+	<!--Vis.js Network-->
+	<script type="text/javascript" src="../node_modules/vis-network/dist/vis-network.min.js"></script>
+	<script type="text/javascript" src="vis-network.patch.js"></script>
+
+	<!--Graph Editor-->
+	<link rel="stylesheet" type="text/css" href="style.css">
+	<script type="text/javascript" src="main.js"></script>
+	<script type="text/javascript" src="validator.js"></script>
+	<script type="text/javascript" src="notifications.js"></script>
+	<script type="text/javascript" src="collection.js"></script>
+</head>
+<body>
+</body>
+<script>
+	$(function () {
+		const RandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+		const RandomIndex = max => RandomInt(0, max);
+		//All ids must be string!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		//Create graph in container 'body'.
+		ge = GraphEditor('body', false);
+		//Create nodes and edges and connect them.
+		let nodes = RandomInt(5, 20);
+		let edges = RandomInt(Math.round(nodes / 2), nodes * 2);
+		for (let i = 0; i < nodes; i++) ge.SetElement(i + '', 'defaultNode');
+		for (let i = 0; i < nodes; i++) ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: RandomIndex(nodes) + '', to: RandomIndex(nodes) + ''});
+		//Generate layout and fir zoom.
+		ge.Layout();
+	});
+</script>
+</html>

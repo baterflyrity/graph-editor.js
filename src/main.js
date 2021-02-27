@@ -595,6 +595,7 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 				nestedGraph: nestedGraph,
 				cachedTypedPropertiesValues: cachedTypedPropertiesValues
 			};
+			if (typeof (element.elementClassArguments.x) === 'undefined' && typeof (element.elementClassArguments.y) === 'undefined') element.elementClassArguments.autolayout = true;
 			if (triggerEvents)
 				element = scope.onValidateElement.Trigger(element);
 			element = ValidateElement(element);
@@ -622,6 +623,9 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 			return [id];
 		},
 		onRemoveElement: CreateEvent('onRemoveElement', '(elementIDOrElement)->elementIDOrElement', 'pipe'),
+		Layout(spacing = {x: 200, y: 100}) {
+			scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'node').map(node => CalculateNodeLayout(node, spacing)).forEach(e => scope.SetElement(e.elementID, e.elementTypeID, e.elementPropertiesValues, e.elementClassArguments, e.nestedGraph, e.cachedTypedPropertiesValues));
+		},
 		//endregion
 	};
 
@@ -799,6 +803,11 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 						levelSeparation: 200,
 						nodeSpacing: 50,
 					} : false
+				},
+				edges: {
+					smooth: {
+						type: 'continuous',
+					}
 				}
 			});
 		if (editable) {
@@ -954,6 +963,23 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 		a.click();
 	}
 
+	function GetNodeInputPathLength(nodeID, path = []) {
+		if (!nodeID || path.indexOf(nodeID) !== -1) return 0;
+		let parentLengths = scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'edge' && e.elementClassArguments.to === nodeID).map(e=>scope.GetElement(e.elementClassArguments.from)).filter(e=>!!e).map(e => GetNodeInputPathLength(e.elementID, path.concat([nodeID])));
+		return parentLengths.length ? Math.max(...parentLengths) + 1 : 0;
+	}
+
+	function CalculateNodeLayout(node, spacing = {x: 200, y: 100}) {
+		if (!node || !(node.elementClassArguments.autolayout === true)) return node;
+		let level = GetNodeInputPathLength(node.elementID);
+		let index = scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'node' && GetNodeInputPathLength(e.elementID) === level).indexOf(node);
+		node = CopyObject(node);
+		node.elementClassArguments.x = spacing.x * index;
+		node.elementClassArguments.y = spacing.y * level;
+		node.elementClassArguments.autolayout = false;
+		return node;
+	}
+
 	let $modal = BuildModal();
 	let $graph = BuildGraph();
 	scope.upload = () => $modal.show();
@@ -977,7 +1003,7 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 		label: 'Сохранить',
 		icon: 'save',
 		click: _ => {
-			if(hierarchical) Alert('Позии узлов в иерархическом режиме просмотра не сохраняются.', 'Внимание', 'warning');
+			if (hierarchical) Alert('Позии узлов в иерархическом режиме просмотра не сохраняются.', 'Внимание', 'warning');
 			Alert('Свойства пользовательских классов будут недоступны.', 'Внимание', 'warning');
 			scope.download();
 		}
