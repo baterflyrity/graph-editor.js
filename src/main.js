@@ -1,5 +1,5 @@
 //Last release: 1.2.5-unstable
-function GraphEditor(container, hierarchical = true, editable = true) {
+function GraphEditor(container, hierarchical = true, editable = true, physics = false) {
 
 	/**
 	 * Check own property existence. In case object does not contain such property and default value defined assignes that property to object and also returns true.
@@ -301,6 +301,14 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		}));
 	}
 
+	function RetrieveNodePositionIfNone(element) {
+		if (element && scope.GetElementType(element.elementTypeID).elementClassID === 'node') {
+			let visTemplate = scope.engine.nodes.get(element.elementID);
+			if (visTemplate) element.elementClassArguments = Object.assign({}, element.elementClassArguments, scope.engine.graph.getPosition(element.elementID));
+		}
+		return element;
+	}
+
 	function PatchAfterEvent(baseEvent) {
 		let name = 'onAfter' + baseEvent.eventName.substring(2);
 		let event = CreateEvent(name, baseEvent.eventDescription.split('->')[0], 'broadcast');
@@ -359,7 +367,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		},
 		onLoadGraph: CreateEvent('onLoadGraph', '(savedGraph)->savedGraph', 'pipe'),
 		clear: () => {
-			scope.GetElement().forEach(x => scope.RemoveElement(x));
+			scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'node').forEach(x => scope.RemoveElement(x));
 			scope.GetElementType().forEach(x => scope.RemoveElementType(x));
 			scope.GetElementProperty().forEach(x => scope.RemoveElementProperty(x));
 			scope.GetElementStyle().forEach(x => scope.RemoveElementStyle(x));
@@ -587,6 +595,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				nestedGraph: nestedGraph,
 				cachedTypedPropertiesValues: cachedTypedPropertiesValues
 			};
+			if (typeof (element.elementClassArguments.x) === 'undefined' && typeof (element.elementClassArguments.y) === 'undefined') element.elementClassArguments.autolayout = true;
 			if (triggerEvents)
 				element = scope.onValidateElement.Trigger(element);
 			element = ValidateElement(element);
@@ -602,7 +611,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		onValidateElement: CreateEvent('onValidateElement', '(rawElement)->rawElement', 'pipe'),
 		onCreateElement: CreateEvent('onCreateElement', '(element)->element', 'pipe'),
 		onSetElement: CreateEvent('onSetElement', '(element)->element', 'pipe'),
-		GetElement: elementID => typeof (elementID) === 'undefined' ? Object.values(scope.elements) : CopyObject(scope.elements[elementID]),
+		GetElement: elementID => typeof (elementID) === 'undefined' ? Object.values(scope.elements).map(RetrieveNodePositionIfNone) : RetrieveNodePositionIfNone(CopyObject(scope.elements[elementID])),
 		RemoveElement: function (elementIDOrElement, triggerEvents = true) {
 			if (triggerEvents) elementIDOrElement = scope.onRemoveElement.Trigger(elementIDOrElement);
 			if (typeof (elementIDOrElement) === 'undefined') return [];
@@ -614,9 +623,10 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 			return [id];
 		},
 		onRemoveElement: CreateEvent('onRemoveElement', '(elementIDOrElement)->elementIDOrElement', 'pipe'),
+		Layout(spacing = {x: 200, y: 100}) {
+			scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'node').map(node => CalculateNodeLayout(node, spacing)).forEach(e => scope.SetElement(e.elementID, e.elementTypeID, e.elementPropertiesValues, e.elementClassArguments, e.nestedGraph, e.cachedTypedPropertiesValues));
+		},
 		//endregion
-
-
 	};
 
 	scope.container.html('<div class="graph-editor"></div>');
@@ -661,6 +671,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 								<i class="dropdown icon"></i>
 								<div class="menu">${availableTypesBuff.join('')}</div>
 							</div>
+							<span class="element type meta"></span>
 						</div>
 						<div class="meta">${elementClassID}</div>
 						<div class="description">
@@ -780,7 +791,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 				},
 				locale: 'ru',
 				physics: {
-					enabled: true,
+					enabled: physics,
 					maxVelocity: 1,
 					minVelocity: 0.5
 				},
@@ -792,9 +803,13 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 						levelSeparation: 200,
 						nodeSpacing: 50,
 					} : false
+				},
+				edges: {
+					smooth: {
+						type: 'continuous',
+					}
 				}
 			});
-		console.log(scope.engine.GetNode());
 		if (editable) {
 			scope.engine.graph.addEventListener('select', function (e) {
 				if (editedClass && editedElement) scope.engine.onStopEditing.Trigger(editedClass, editedElement);
@@ -948,6 +963,23 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		a.click();
 	}
 
+	function GetNodeInputPathLength(nodeID, path = []) {
+		if (!nodeID || path.indexOf(nodeID) !== -1) return 0;
+		let parentLengths = scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'edge' && e.elementClassArguments.to === nodeID).map(e=>scope.GetElement(e.elementClassArguments.from)).filter(e=>!!e).map(e => GetNodeInputPathLength(e.elementID, path.concat([nodeID])));
+		return parentLengths.length ? Math.max(...parentLengths) + 1 : 0;
+	}
+
+	function CalculateNodeLayout(node, spacing = {x: 200, y: 100}) {
+		if (!node || !(node.elementClassArguments.autolayout === true)) return node;
+		let level = GetNodeInputPathLength(node.elementID);
+		let index = scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'node' && GetNodeInputPathLength(e.elementID) === level).indexOf(node);
+		node = CopyObject(node);
+		node.elementClassArguments.x = spacing.x * index;
+		node.elementClassArguments.y = spacing.y * level;
+		node.elementClassArguments.autolayout = false;
+		return node;
+	}
+
 	let $modal = BuildModal();
 	let $graph = BuildGraph();
 	scope.upload = () => $modal.show();
@@ -971,6 +1003,7 @@ function GraphEditor(container, hierarchical = true, editable = true) {
 		label: 'Сохранить',
 		icon: 'save',
 		click: _ => {
+			if (hierarchical) Alert('Позии узлов в иерархическом режиме просмотра не сохраняются.', 'Внимание', 'warning');
 			Alert('Свойства пользовательских классов будут недоступны.', 'Внимание', 'warning');
 			scope.download();
 		}
@@ -1093,7 +1126,9 @@ function DataGraph(graphEditor) {
 	graphEditor.SetElementProperty('pipeData', 'hiddenLabel', 'transmitted data', '*');
 	graphEditor.SetElementType('dataPipe', 'edge', 'Data pipe', 'Передаваемые данные', 'blue', ['pipeData'], ['defaultEdge']);
 
-	function DummyHandler(processorData) {return processorData;}
+	function DummyHandler(processorData) {
+		return processorData;
+	}
 
 	/**
 	 * @param connectionType {'from'|'to'}
@@ -1193,4 +1228,13 @@ function DataGraph(graphEditor) {
 
 
 	return scope;
+}
+
+
+function SetElementTypeMeta(text) {
+	$('.element.type.meta').text(text);
+}
+
+function ClearElementTypeMeta() {
+	SetElementTypeMeta('');
 }

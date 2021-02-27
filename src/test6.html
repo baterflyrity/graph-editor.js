@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Autolayout example</title>
+	<link rel="stylesheet" type="text/css" href="../dist/bundle.min.css">
+	<script type="text/javascript" src="../dist/bundle.min.js"></script>
+</head>
+<body>
+</body>
+<script>
+	$(function () {
+		const RandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+		const RandomIndex = max => RandomInt(0, max);
+		//All ids must be string!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		//Create graph in container 'body'.
+		ge = GraphEditor('body', false, false);
+		//Create nodes and edges and connect them.
+		let nodes = RandomInt(5, 20);
+		let edges = RandomInt(Math.round(nodes / 2), nodes * 2);
+		for (let i = 0; i < nodes; i++) ge.SetElement(i + '', 'defaultNode');
+		for (let i = 0; i < nodes; i++) ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: RandomIndex(nodes) + '', to: RandomIndex(nodes) + ''});
+		//Generate layout and fir zoom.
+		ge.Layout();
+	});
+</script>
+</html>
