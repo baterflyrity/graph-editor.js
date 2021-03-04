@@ -966,7 +966,7 @@ function GraphEditor(container, hierarchical = false, editable = true, physics =
 
 	function GetNodeInputPathLength(nodeID, path = []) {
 		if (!nodeID || path.indexOf(nodeID) !== -1) return 0;
-		let parentLengths = scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'edge' && e.elementClassArguments.to === nodeID).map(e=>scope.GetElement(e.elementClassArguments.from)).filter(e=>!!e).map(e => GetNodeInputPathLength(e.elementID, path.concat([nodeID])));
+		let parentLengths = scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'edge' && e.elementClassArguments.to === nodeID).map(e => scope.GetElement(e.elementClassArguments.from)).filter(e => !!e).map(e => GetNodeInputPathLength(e.elementID, path.concat([nodeID])));
 		return parentLengths.length ? Math.max(...parentLengths) + 1 : 0;
 	}
 
@@ -1232,8 +1232,9 @@ function DataGraph(graphEditor) {
 }
 
 
-function SetElementTypeMeta(text) {
-	$('.element.type.meta').text(text);
+function SetElementTypeMeta(text, raw = false) {
+	if (raw) $('.element.type.meta').html(text);
+	else $('.element.type.meta').text(text);
 }
 
 function ClearElementTypeMeta() {
