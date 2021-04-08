@@ -7,7 +7,7 @@ const rename = require("gulp-rename");
 
 
 function javascript(cb) {
-	return src(['./node_modules/jquery/dist/jquery.min.js', './node_modules/fomantic-ui/dist/semantic.js', './node_modules/vis-network/dist/vis-network.min.js', './src/**/*.js'])
+	return src(['./node_modules/jquery/dist/jquery.min.js', './node_modules/fomantic-ui/dist/semantic.js', './node_modules/jquery-ui-dist/jquery-ui.min.js', './node_modules/vis-network/dist/vis-network.min.js', './src/**/*.js'])
 		.pipe(terser({
 			output: {
 				comments: false
@@ -18,7 +18,7 @@ function javascript(cb) {
 }
 
 function css(cb) {
-	return src(['./node_modules/fomantic-ui/dist/semantic.css', './src/**/*.css'])
+	return src(['./node_modules/fomantic-ui/dist/semantic.css', './node_modules/jquery-ui-dist/jquery-ui.min.css', './src/**/*.css'])
 		.pipe(cleanCSS({
 			1: {
 				all: true,
