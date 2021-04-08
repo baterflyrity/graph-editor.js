@@ -741,6 +741,7 @@ function GraphEditor(container, hierarchical = false, editable = true, physics =
 			scope.RemoveElement(element);
 			SelfDestruct();
 		});
+		$editor.draggable();
 	}
 
 	scope.engine.onStartEditing.Subscribe(CreateEditor);
