@@ -1,5 +1,5 @@
 //Last release: 1.2.5-unstable
-function GraphEditor(container, hierarchical = true, editable = true, physics = false) {
+function GraphEditor(container, hierarchical = false, editable = true, physics = false) {
 
 	/**
 	 * Check own property existence. In case object does not contain such property and default value defined assignes that property to object and also returns true.
@@ -363,6 +363,7 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 				savedGraph.elementTypes.forEach(x => scope.SetElementType(x.typeID, x.elementClassID, x.typeName, x.typeDescription, x.typeColor, x.typePropertiesIDsArray, x.typeStylesIDsArray));
 			if (savedGraph.hasOwnProperty('elements'))
 				savedGraph.elements.forEach(x => scope.SetElement(x.elementID, x.elementTypeID, x.elementPropertiesValues, x.elementClassArguments, x.nestedGraph, x.cahedTypedPropertiesValues));
+			scope.Layout();
 			FitZoom();
 		},
 		onLoadGraph: CreateEvent('onLoadGraph', '(savedGraph)->savedGraph', 'pipe'),
@@ -740,6 +741,7 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 			scope.RemoveElement(element);
 			SelfDestruct();
 		});
+		$editor.draggable();
 	}
 
 	scope.engine.onStartEditing.Subscribe(CreateEditor);
@@ -965,7 +967,7 @@ function GraphEditor(container, hierarchical = true, editable = true, physics = 
 
 	function GetNodeInputPathLength(nodeID, path = []) {
 		if (!nodeID || path.indexOf(nodeID) !== -1) return 0;
-		let parentLengths = scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'edge' && e.elementClassArguments.to === nodeID).map(e=>scope.GetElement(e.elementClassArguments.from)).filter(e=>!!e).map(e => GetNodeInputPathLength(e.elementID, path.concat([nodeID])));
+		let parentLengths = scope.GetElement().filter(e => scope.GetElementType(e.elementTypeID).elementClassID === 'edge' && e.elementClassArguments.to === nodeID).map(e => scope.GetElement(e.elementClassArguments.from)).filter(e => !!e).map(e => GetNodeInputPathLength(e.elementID, path.concat([nodeID])));
 		return parentLengths.length ? Math.max(...parentLengths) + 1 : 0;
 	}
 
@@ -1231,8 +1233,9 @@ function DataGraph(graphEditor) {
 }
 
 
-function SetElementTypeMeta(text) {
-	$('.element.type.meta').text(text);
+function SetElementTypeMeta(text, raw = false) {
+	if (raw) $('.element.type.meta').html(text);
+	else $('.element.type.meta').text(text);
 }
 
 function ClearElementTypeMeta() {
