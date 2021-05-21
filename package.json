@@ -1,22 +1,23 @@
 {
-  "dependencies": {
-    "del": "^5.1.0",
-    "execa": "latest",
-    "fomantic-ui": "2.8.4",
-    "gulp": "latest",
-    "gulp-clean-css": "^4.3.0",
-    "gulp-concat": "latest",
-    "gulp-order": "^1.2.0",
-    "gulp-print": "^5.0.2",
-    "gulp-rename": "latest",
-    "gulp-shell": "^0.8.0",
-    "gulp-terser": "latest",
-    "jquery": "^3.5.0",
-    "jquery-ui-dist": "^1.12.1",
-    "vis-network": "~7.10.2",
-    "yargs": "latest"
-  },
-  "scripts": {
-    "preinstall": "node -e \"!process.env.npm_config_user_agent.startsWith('pnpm/') && !process.argv.filter(x=>x=='--force').length && !console.warn('\\n\\nRecommended to use \\`npx pnpm install\\` or \\`pnpm install\\` to install dependencies in this repository.\\nUse \\`npm install --force\\` to install with npm.\\n\\n') && process.exit(-1)\""
-  }
+	"dependencies": {
+		"del": "^5.1.0",
+		"execa": "latest",
+		"fomantic-ui": "2.8.4",
+		"gulp": "latest",
+		"gulp-clean-css": "^4.3.0",
+		"gulp-concat": "latest",
+		"gulp-order": "^1.2.0",
+		"gulp-print": "^5.0.2",
+		"gulp-rename": "latest",
+		"gulp-shell": "^0.8.0",
+		"gulp-terser": "latest",
+		"jquery": "^3.5.0",
+		"jquery-ui-dist": "^1.12.1",
+		"vis-network": "~7.10.2",
+		"yargs": "latest"
+	},
+	"name": "graph-editor.js",
+	"repository": "https://github.com/baterflyrity/graph-editor.js.git",
+	"author": "baterflyrity <baterflyrity@yandex.ru>",
+	"license": "MIT"
 }
