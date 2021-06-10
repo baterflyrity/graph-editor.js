@@ -1014,6 +1014,11 @@ function GraphEditor(container, hierarchical = false, editable = true, physics =
 		label: 'Загрузить',
 		icon: 'folder open',
 		click: _ => scope.upload()
+	}, {
+		name: 'physics',
+		label: 'Физика',
+		icon: 'atom',
+		click: _ => scope.engine.graph.setOptions({physics:{enabled:!scope.engine.graph.physics.physicsEnabled}})
 	}) : null;
 	scope.container.find('.graph-editor').append($graph, $menu);
 	FitZoom();
