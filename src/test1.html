@@ -48,6 +48,13 @@
 		ge.SetElement('d', 'customTitledNode', {
 			label: 'dynamic'
 		});
+		ge.SetElement('e', 'customTitledNode', {
+			label: 'alone',
+			color: 'orange',
+			customTitle: {
+				options: ['A','B','C']
+			}
+		});
 		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'a', to: 'b'});
 		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'a', to: 'c'});
 		ge.SetElement(GraphEditor.GenerateID(), 'defaultEdge', {}, {from: 'c', to: 'd'});

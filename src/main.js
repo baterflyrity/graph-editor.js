@@ -125,16 +125,16 @@ function GraphEditor(container, hierarchical = false, editable = true, physics =
 				}
 				return opt;
 			});
-			if (!defaultValue) defaultValue = multiple ? [options[0].value] : options[0].value;
+			// if (!defaultValue) defaultValue = multiple ? [options[0].value] : options[0].value; // HACK: uncomment this to use first value as default instead of 'All'
 			let attributes = [];
 			if (searchable && (!autosearchable || options.length > 5)) attributes.push('search');
 			if (multiple) attributes.push('multiple');
 			let groups = GroupArray(options, option => option.group);
 			let optionsHTML = groups.map(g =>
-				(groups.length !== 1 ? `<div class="ui dividing header">${g.group}</div>` : '') +
-				g.items.map(option => `<div class="item" data-value="${option.value}" data-text='${option.content.short}'>${option.content.long}</div>`).join('')
+				// (groups.length !== 1 ? `<div class="ui dividing header">${g.group}</div>` : '') + // HACK: Swap commented and uncommented lines to hide only one group in selection node's property.
+				`<div class="ui dividing header">${g.group}</div>` +
+				g.items.map(option => `<div class="item" data-value="${option.value}" data-text='${g.group}: ${option.content.short}'>${option.content.long}</div>`).join('')
 			).join('');
-			// let optionsHTML = options.map(option => `<div class="ui dividing header">header</div><div class="item" data-value="${option.value}" data-text='${option.shortContent}'>${option.longContent}</div>`);
 			let $dom = jQuery(`<div><label>${label}: </label>
 <div class="property ui fluid inline selection ${attributes.join(' ')} ${optional ? 'clearable' : ''} dropdown">
 	<input type="hidden" value="">
@@ -150,13 +150,15 @@ function GraphEditor(container, hierarchical = false, editable = true, physics =
 					hideDividers: 'empty',
 					fullTextSearch: true,
 					onChange: function (value, text, $choice) {
-						Schedule(function () {
-							$dropdown.find('.ui.header').map((hederIndex, headerElement) => {
-								let $header = $(headerElement);
-								if ($header.nextUntil('.ui.header').filter((itemIndex, itemElement) => $(itemElement).is('.item')).toArray().every(itemElement => $(itemElement).is('.filtered'))) $header.hide();
-								else $header.show();
-							});
-						});
+						// HACK: Uncomment this to hide empty groups in selection node's property.
+						// Schedule(function () {
+						// 	$dropdown.find('.ui.header').map((hederIndex, headerElement) => {
+						// 		let $header = $(headerElement);
+						// 		if ($header.nextUntil('.ui.header').filter((itemIndex, itemElement) => $(itemElement).is('.item')).toArray().every(itemElement => $(itemElement).is('.filtered'))) $header.hide();
+						// 		else $header.show();
+						// 	});
+						// });
+						if (!$dropdown.dropdown('get item').length) $dropdown.dropdown('set text', 'All');
 					},
 				});
 				$dropdown.find('.ui.header').click(function () {
@@ -164,8 +166,13 @@ function GraphEditor(container, hierarchical = false, editable = true, physics =
 					if (items.find(itemElement => $(itemElement).is('.filtered'))) items.forEach(item => $dropdown.dropdown('remove selected', $(item).data('value')));
 					else items.forEach(item => $dropdown.dropdown('set selected', $(item).data('value')));
 				});
-				if (multiple) defaultValue.forEach(val => $dropdown.dropdown('set selected', val));
-				else $dropdown.dropdown('set selected', defaultValue);
+				if (!defaultValue) {
+					$dropdown.dropdown('set value', '');
+					$dropdown.dropdown('set text', 'All');
+				} else {
+					if (multiple) defaultValue.forEach(val => $dropdown.dropdown('set selected', val));
+					else $dropdown.dropdown('set selected', defaultValue);
+				}
 			});
 			return $dom;
 		}
@@ -1018,7 +1025,7 @@ function GraphEditor(container, hierarchical = false, editable = true, physics =
 		name: 'physics',
 		label: 'Физика',
 		icon: 'atom',
-		click: _ => scope.engine.graph.setOptions({physics:{enabled:!scope.engine.graph.physics.physicsEnabled}})
+		click: _ => scope.engine.graph.setOptions({physics: {enabled: !scope.engine.graph.physics.physicsEnabled}})
 	}) : null;
 	scope.container.find('.graph-editor').append($graph, $menu);
 	FitZoom();
