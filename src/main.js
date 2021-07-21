@@ -447,6 +447,8 @@ function GraphEditor(container, hierarchical = false, editable = true, physics =
 			GetEdge: edgeID => scope.engine.edges.get(edgeID),
 			RemoveEdge: (visEdgeOrEdgeID, triggerEvents = true) => scope.engine.edges.remove(triggerEvents ? scope.engine.onRemoveEdge.Trigger(visEdgeOrEdgeID) : visEdgeOrEdgeID),
 			onRemoveEdge: CreateEvent('onRemoveEdge', '(visEdgeOrEdgeID)->visEdgeOrEdgeID', 'pipe'),
+			onParentEdited: CreateEvent('onParentEdited', '(visEdgeOrEdgeID)->visEdgeOrEdgeID', 'pipe'),
+			onChildEdited: CreateEvent('onChildEdited', '(visEdgeOrEdgeID)->visEdgeOrEdgeID', 'pipe'),
 			//endregion
 		},
 
@@ -779,6 +781,11 @@ function GraphEditor(container, hierarchical = false, editable = true, physics =
 							edgeEditingState = 0;
 							Schedule(() => scope.engine.graph.disableEditMode());
 							scope.engine.onStopEditing.Trigger('edge', visEdge);
+							let lastEdge = scope.GetElement(visEdge.id);
+							if(lastEdge){
+								if(visEdge.from!== lastEdge.visTemplate.from) Schedule(() =>scope.engine.onParentEdited.Trigger(visEdge));
+								if(visEdge.to!== lastEdge.visTemplate.to) Schedule(() =>scope.engine.onChildEdited.Trigger(visEdge));
+							}
 							callback(scope.engine.onSetEdge.Trigger(visEdge));
 						}
 					} : false,
