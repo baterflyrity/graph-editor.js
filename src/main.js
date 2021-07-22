@@ -56,7 +56,7 @@ function GraphEditor(container, hierarchical = false, editable = true, physics =
 		return visEdge
 	}
 
-	//TODO add validation for all object's properties existence and MAYBE throw exceptions.
+	//TODO: add validation for all object's properties existence and MAYBE throw exceptions.
 	function ValidateElementType(rawElementTypeOrElementType) {
 		let nullClasses = rawElementTypeOrElementType.typeStylesIDsArray.filter(styleID => scope.GetElementStyle(styleID) === null);
 		if (nullClasses.length)
@@ -778,15 +778,18 @@ function GraphEditor(container, hierarchical = false, editable = true, physics =
 					editEdge: editable ? function (visEdge, callback) {
 						if (visEdge.from === visEdge.to) callback(null);
 						else {
+							visEdge = scope.engine.onSetEdge.Trigger(visEdge);
 							edgeEditingState = 0;
 							Schedule(() => scope.engine.graph.disableEditMode());
 							scope.engine.onStopEditing.Trigger('edge', visEdge);
 							let lastEdge = scope.GetElement(visEdge.id);
-							if(lastEdge){
-								if(visEdge.from!== lastEdge.visTemplate.from) Schedule(() =>scope.engine.onParentEdited.Trigger(visEdge));
-								if(visEdge.to!== lastEdge.visTemplate.to) Schedule(() =>scope.engine.onChildEdited.Trigger(visEdge));
+							console.log(visEdge, lastEdge);
+							if (lastEdge) {
+								if (visEdge.from !== lastEdge.visTemplate.from) Schedule(() => scope.engine.onParentEdited.Trigger(visEdge));
+								if (visEdge.to !== lastEdge.visTemplate.to) Schedule(() => scope.engine.onChildEdited.Trigger(visEdge));
 							}
-							callback(scope.engine.onSetEdge.Trigger(visEdge));
+							scope.SetElement(lastEdge.elementID, lastEdge.elementTypeID, lastEdge.elementPropertiesValues, Object.assign({}, lastEdge.elementClassArguments, {from: visEdge.from, to: visEdge.to}), lastEdge.nestedGraph, lastEdge.cachedTypedPropertiesValues);
+							callback(visEdge);
 						}
 					} : false,
 					addNode: editable ? function (visNode, callback) {
